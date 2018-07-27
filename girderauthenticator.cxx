@@ -59,29 +59,7 @@ QString GirderAuthenticator::authenticateApiKey(const QString& apiKey)
     return girderToken;
   }
 
-  QByteArray bytes = reply->readAll();
-  if (reply->error())
-  {
-    qDebug() << "Error: api authentication failed!";
-    qDebug() << "Response from server was: " << bytes;
-  }
-  else
-  {
-    QVariant v = reply->header(QNetworkRequest::SetCookieHeader);
-    QList<QNetworkCookie> cookies = qvariant_cast<QList<QNetworkCookie> >(v);
-    foreach (QNetworkCookie cookie, cookies)
-    {
-      if (cookie.name() == "girderToken")
-      {
-        girderToken = cookie.value();
-      }
-    }
-
-    if (girderToken.isEmpty())
-    {
-      qDebug() << "Error: Girder response did not set girderToken!";
-    }
-  }
+  girderToken = getTokenFromReply(reply);
 
   reply->deleteLater();
 
@@ -108,6 +86,37 @@ QNetworkReply* GirderAuthenticator::postAndWaitForReply(const QNetworkRequest& r
   loop.exec();
 
   return reply;
+}
+
+QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply)
+{
+  QString girderToken;
+
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    qDebug() << "Error: api authentication failed!";
+    qDebug() << "Response from server was: " << bytes;
+  }
+  else
+  {
+    QVariant v = reply->header(QNetworkRequest::SetCookieHeader);
+    QList<QNetworkCookie> cookies = qvariant_cast<QList<QNetworkCookie> >(v);
+    foreach (QNetworkCookie cookie, cookies)
+    {
+      if (cookie.name() == "girderToken")
+      {
+        girderToken = cookie.value();
+      }
+    }
+
+    if (girderToken.isEmpty())
+    {
+      qDebug() << "Error: Girder response did not set girderToken!";
+    }
+  }
+
+  return girderToken;
 }
 
 } // end namespace

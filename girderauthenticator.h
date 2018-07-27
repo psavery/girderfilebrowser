@@ -45,6 +45,9 @@ private:
     bool& timedOut,
     int timeOutMilliseconds = 10000);
 
+  // Read the girder token from a reply
+  static QString getTokenFromReply(QNetworkReply* reply);
+
   QNetworkAccessManager* m_networkManager;
   QString m_girderUrl;
 };
