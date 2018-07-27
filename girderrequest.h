@@ -20,6 +20,7 @@
 #include <QMap>
 #include <QNetworkReply>
 #include <QObject>
+#include <QPair>
 
 class QNetworkAccessManager;
 class QNetworkCookieJar;
@@ -195,6 +196,29 @@ private:
   // <fileId => fileName>
   QMap<QString, QString> m_filesToDownload;
 };
+
+class GetFolderParentRequest : public GirderRequest
+{
+  Q_OBJECT
+
+public:
+  GetFolderParentRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+    const QString& girderToken, const QString& folderId, QObject* parent = 0);
+  ~GetFolderParentRequest();
+
+  void send();
+
+signals:
+  // <parentType, parentId>
+  void parent(const QPair<QString, QString>& parentInfo);
+
+private slots:
+  void finished();
+
+private:
+  QString m_folderId;
+};
+
 }
 
 #endif

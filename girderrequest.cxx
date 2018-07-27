@@ -13,6 +13,7 @@
 #include "utils.h"
 
 #include <QDebug>
+#include <QPair>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QList>
@@ -514,4 +515,76 @@ void DownloadFileRequest::finished()
   reply->deleteLater();
   emit complete();
 }
+
+GetFolderParentRequest::GetFolderParentRequest(QNetworkAccessManager* networkManager,
+  const QString& girderUrl, const QString& girderToken, const QString& folderId, QObject* parent)
+  : GirderRequest(networkManager, girderUrl, girderToken, parent)
+  , m_folderId(folderId)
+{
 }
+
+GetFolderParentRequest::~GetFolderParentRequest()
+{
+}
+
+void GetFolderParentRequest::send()
+{
+  QUrl url(QString("%1/folder/%2").arg(m_girderUrl).arg(m_folderId));
+
+  QNetworkRequest request(url);
+  request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
+
+  auto reply = m_networkManager->get(request);
+  QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
+}
+
+void GetFolderParentRequest::finished()
+{
+  auto reply = qobject_cast<QNetworkReply*>(this->sender());
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    emit error(handleGirderError(reply, bytes), reply);
+  }
+  else
+  {
+    cJSON* jsonResponse = cJSON_Parse(bytes.constData());
+
+    if (!jsonResponse || jsonResponse->type != cJSON_Array)
+    {
+      emit error(QString("Invalid response to getFolderParentRequest."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+
+    // There should only be one response
+    cJSON* jsonFolder = jsonResponse->child;
+    cJSON* idItem = cJSON_GetObjectItem(jsonFolder, "parentCollection");
+    if (!idItem || idItem->type != cJSON_String)
+    {
+      emit error(QString("Unable to extract parent collection."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+    QString parentCollection(idItem->valuestring);
+
+    cJSON* nameItem = cJSON_GetObjectItem(jsonFolder, "parentId");
+    if (!nameItem || nameItem->type != cJSON_String)
+    {
+      emit error(QString("Unable to extract parent id."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+    QString parentId(idItem->valuestring);
+
+    emit parent(QPair<QString, QString>(parentCollection, parentId));
+
+    cJSON_Delete(jsonResponse);
+  }
+  reply->deleteLater();
+}
+
+} // end namespace
