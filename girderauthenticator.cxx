@@ -81,6 +81,7 @@ QNetworkReply* GirderAuthenticator::postAndWaitForReply(const QNetworkRequest& r
   // Wait until we get a response or the timeout occurs
   QEventLoop loop;
   QNetworkReply* reply = m_networkManager->post(request, postData);
+  connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
   connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
   timer.start(timeOutMilliseconds);
   loop.exec();
