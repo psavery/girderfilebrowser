@@ -78,7 +78,7 @@ class ListFoldersRequest : public GirderRequest
 
 public:
   ListFoldersRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString folderId, QObject* parent = 0);
+    const QString& girderToken, const QString parentId, const QString parentType = "folder", QObject* parent = 0);
   ~ListFoldersRequest();
 
   void send();
@@ -90,7 +90,8 @@ private slots:
   void finished();
 
 private:
-  QString m_folderId;
+  QString m_parentId;
+  QString m_parentType;
 };
 
 class ListFilesRequest : public GirderRequest

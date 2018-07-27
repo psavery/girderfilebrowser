@@ -181,9 +181,10 @@ void ListFilesRequest::finished()
 }
 
 ListFoldersRequest::ListFoldersRequest(QNetworkAccessManager* networkManager,
-  const QString& girderUrl, const QString& girderToken, const QString folderId, QObject* parent)
+  const QString& girderUrl, const QString& girderToken, const QString parentId, const QString parentType, QObject* parent)
   : GirderRequest(networkManager, girderUrl, girderToken, parent)
-  , m_folderId(folderId)
+  , m_parentId(parentId)
+  , m_parentType(parentType)
 {
 }
 
@@ -194,8 +195,8 @@ ListFoldersRequest::~ListFoldersRequest()
 void ListFoldersRequest::send()
 {
   QUrlQuery urlQuery;
-  urlQuery.addQueryItem("parentId", m_folderId);
-  urlQuery.addQueryItem("parentType", "folder");
+  urlQuery.addQueryItem("parentId", m_parentId);
+  urlQuery.addQueryItem("parentType", m_parentType);
   urlQuery.addQueryItem("limit", "0");
 
   QUrl url(QString("%1/folder").arg(m_girderUrl));
@@ -288,7 +289,7 @@ void DownloadFolderRequest::send()
   itemsRequest->send();
 
   ListFoldersRequest* foldersRequest =
-    new ListFoldersRequest(m_networkManager, m_girderUrl, m_girderToken, m_folderId, this);
+    new ListFoldersRequest(m_networkManager, m_girderUrl, m_girderToken, m_folderId, "folder", this);
 
   connect(foldersRequest, SIGNAL(folders(const QMap<QString, QString>)), this,
     SLOT(folders(const QMap<QString, QString>)));
