@@ -26,7 +26,8 @@
 namespace cumulus
 {
 
-GirderAuthenticator::GirderAuthenticator(const QString& girderUrl, QNetworkAccessManager* networkManager)
+GirderAuthenticator::GirderAuthenticator(const QString& girderUrl,
+  QNetworkAccessManager* networkManager)
   : m_networkManager(networkManager)
   , m_girderUrl(girderUrl)
 {
@@ -47,23 +48,12 @@ QString GirderAuthenticator::authenticateApiKey(const QString& apiKey)
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
-  // Make a timer for timeout
-  QTimer timer;
-  // 10 seconds
-  int timeOutTime = 10000;
   bool timedOut = false;
 
-  // Quit the event loop on timeout and indicate that timeout occurred
-  connect(&timer, &QTimer::timeout, [&timedOut](){ timedOut = true; });
+  QNetworkReply* reply = postAndWaitForReply(request, postData, timedOut);
 
-  // Wait until we get a response or the timeout occurs
-  QEventLoop loop;
-  QNetworkReply* reply = m_networkManager->post(request, postData);
-  connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-  timer.start(timeOutTime);
-  loop.exec();
-
-  if (timedOut) {
+  if (timedOut)
+  {
     qDebug() << "Error: timeout occurred during girder api key authentication!";
     reply->deleteLater();
     return girderToken;
@@ -96,6 +86,28 @@ QString GirderAuthenticator::authenticateApiKey(const QString& apiKey)
   reply->deleteLater();
 
   return girderToken;
+}
+
+// Returns true if a reply was received, and false on timeout
+QNetworkReply* GirderAuthenticator::postAndWaitForReply(const QNetworkRequest& request,
+                                          const QByteArray& postData,
+                                          bool& timedOut,
+                                          int timeOutMilliseconds)
+{
+  // Make a timer for timeout
+  QTimer timer;
+
+  // Quit the event loop on timeout and indicate that timeout occurred
+  connect(&timer, &QTimer::timeout, [&timedOut]() { timedOut = true; });
+
+  // Wait until we get a response or the timeout occurs
+  QEventLoop loop;
+  QNetworkReply* reply = m_networkManager->post(request, postData);
+  connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+  timer.start(timeOutMilliseconds);
+  loop.exec();
+
+  return reply;
 }
 
 } // end namespace

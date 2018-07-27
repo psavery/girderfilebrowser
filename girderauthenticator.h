@@ -20,6 +20,8 @@
 #include "Exports.h"
 
 class QNetworkAccessManager;
+class QNetworkReply;
+class QNetworkRequest;
 
 namespace cumulus
 {
@@ -35,6 +37,14 @@ public:
   QString authenticateApiKey(const QString& apiKey);
 
 private:
+  // Send an http post with the network manager and wait for a reply.
+  // Times out after a specified amount of time.
+  // If a time out occurs, timedOut will be set to true.
+  QNetworkReply* postAndWaitForReply(const QNetworkRequest& request,
+    const QByteArray& postData,
+    bool& timedOut,
+    int timeOutMilliseconds = 10000);
+
   QNetworkAccessManager* m_networkManager;
   QString m_girderUrl;
 };
