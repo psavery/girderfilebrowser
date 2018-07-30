@@ -550,7 +550,8 @@ void GetFolderParentRequest::finished()
   {
     cJSON* jsonResponse = cJSON_Parse(bytes.constData());
 
-    if (!jsonResponse || jsonResponse->type != cJSON_Array)
+    // There should only be one response
+    if (!jsonResponse || jsonResponse->type != cJSON_Object)
     {
       emit error(QString("Invalid response to getFolderParentRequest."));
       reply->deleteLater();
@@ -558,20 +559,18 @@ void GetFolderParentRequest::finished()
       return;
     }
 
-    // There should only be one response
-    cJSON* jsonFolder = jsonResponse->child;
-    cJSON* idItem = cJSON_GetObjectItem(jsonFolder, "parentCollection");
-    if (!idItem || idItem->type != cJSON_String)
+    cJSON* nameItem = cJSON_GetObjectItem(jsonResponse, "parentCollection");
+    if (!nameItem || nameItem->type != cJSON_String)
     {
       emit error(QString("Unable to extract parent collection."));
       reply->deleteLater();
       cJSON_Delete(jsonResponse);
       return;
     }
-    QString parentCollection(idItem->valuestring);
+    QString parentCollection(nameItem->valuestring);
 
-    cJSON* nameItem = cJSON_GetObjectItem(jsonFolder, "parentId");
-    if (!nameItem || nameItem->type != cJSON_String)
+    cJSON* idItem = cJSON_GetObjectItem(jsonResponse, "parentId");
+    if (!idItem || idItem->type != cJSON_String)
     {
       emit error(QString("Unable to extract parent id."));
       reply->deleteLater();
