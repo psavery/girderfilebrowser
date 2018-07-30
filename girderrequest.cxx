@@ -633,7 +633,7 @@ void GetFolderRootPathRequest::finished()
 
     if (!jsonResponse || jsonResponse->type != cJSON_Array)
     {
-      emit error(QString("Invalid response to listFolders."));
+      emit error(QString("Invalid response to GetFolderRootPathRequest."));
       cJSON_Delete(jsonResponse);
       return;
     }
@@ -641,8 +641,16 @@ void GetFolderRootPathRequest::finished()
     QList<QMap<QString, QString>> rootPathList;
     for (cJSON* jsonFolder = jsonResponse->child; jsonFolder; jsonFolder = jsonFolder->next)
     {
+      // For some reason, everything is under an "object" key...
+      cJSON* objectEntry = cJSON_GetObjectItem(jsonFolder, "object");
+      if (!objectEntry || objectEntry->type != cJSON_Object)
+      {
+        emit error(QString("Object key is missing."));
+        break;
+      }
+
       QMap<QString, QString> entryMap;
-      cJSON* modelTypeItem = cJSON_GetObjectItem(jsonFolder, "_modelType");
+      cJSON* modelTypeItem = cJSON_GetObjectItem(objectEntry, "_modelType");
       if (!modelTypeItem || modelTypeItem->type != cJSON_String)
       {
         emit error(QString("Unable to extract model type."));
@@ -650,7 +658,7 @@ void GetFolderRootPathRequest::finished()
       }
       entryMap["type"] = modelTypeItem->valuestring;
 
-      cJSON* idItem = cJSON_GetObjectItem(jsonFolder, "_id");
+      cJSON* idItem = cJSON_GetObjectItem(objectEntry, "_id");
       if (!idItem || idItem->type != cJSON_String)
       {
         emit error(QString("Unable to extract id."));
@@ -664,7 +672,7 @@ void GetFolderRootPathRequest::finished()
       else
         nameField = "name";
 
-      cJSON* nameItem = cJSON_GetObjectItem(jsonFolder, nameField.toStdString().c_str());
+      cJSON* nameItem = cJSON_GetObjectItem(objectEntry, nameField.toStdString().c_str());
       if (!nameItem || nameItem->type != cJSON_String)
       {
         emit error(QString("Unable to extract name."));
