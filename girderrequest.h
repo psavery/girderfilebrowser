@@ -63,7 +63,7 @@ public:
   void send();
 
 signals:
-  void items(const QList<QString>& itemIds);
+  void items(const QMap<QString, QString>& itemMap);
 
 private slots:
   void finished();

@@ -86,7 +86,7 @@ void ListItemsRequest::finished()
       return;
     }
 
-    QList<QString> itemList;
+    QMap<QString, QString> itemMap;
     for (cJSON* jsonItem = jsonResponse->child; jsonItem; jsonItem = jsonItem->next)
     {
 
@@ -96,10 +96,20 @@ void ListItemsRequest::finished()
         emit error(QString("Unable to extract item id."));
         break;
       }
-      itemList.append(QString((idItem->valuestring)));
+      QString id(idItem->valuestring);
+
+      cJSON* nameItem = cJSON_GetObjectItem(jsonItem, "name");
+      if (!nameItem || nameItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract item name."));
+        break;
+      }
+      QString name(nameItem->valuestring);
+
+      itemMap[id] = name;
     }
 
-    emit items(itemList);
+    emit items(itemMap);
 
     cJSON_Delete(jsonResponse);
   }
