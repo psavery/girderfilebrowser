@@ -569,6 +569,7 @@ void GetFolderParentRequest::finished()
       return;
     }
 
+    QMap<QString, QString> parentInfo;
     cJSON* nameItem = cJSON_GetObjectItem(jsonResponse, "parentCollection");
     if (!nameItem || nameItem->type != cJSON_String)
     {
@@ -577,7 +578,7 @@ void GetFolderParentRequest::finished()
       cJSON_Delete(jsonResponse);
       return;
     }
-    QString parentCollection(nameItem->valuestring);
+    parentInfo["type"] = nameItem->valuestring;
 
     cJSON* idItem = cJSON_GetObjectItem(jsonResponse, "parentId");
     if (!idItem || idItem->type != cJSON_String)
@@ -587,9 +588,94 @@ void GetFolderParentRequest::finished()
       cJSON_Delete(jsonResponse);
       return;
     }
-    QString parentId(idItem->valuestring);
+    parentInfo["id"] = idItem->valuestring;
 
-    emit parent(QPair<QString, QString>(parentCollection, parentId));
+    emit parent(parentInfo);
+
+    cJSON_Delete(jsonResponse);
+  }
+  reply->deleteLater();
+}
+
+GetFolderRootPathRequest::GetFolderRootPathRequest(QNetworkAccessManager* networkManager,
+  const QString& girderUrl, const QString& girderToken, const QString& folderId, QObject* parent)
+  : GirderRequest(networkManager, girderUrl, girderToken, parent)
+  , m_folderId(folderId)
+{
+}
+
+GetFolderRootPathRequest::~GetFolderRootPathRequest()
+{
+}
+
+void GetFolderRootPathRequest::send()
+{
+  QUrl url(QString("%1/folder/%2/rootpath").arg(m_girderUrl).arg(m_folderId));
+
+  QNetworkRequest request(url);
+  request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
+
+  auto reply = m_networkManager->get(request);
+  QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
+}
+
+void GetFolderRootPathRequest::finished()
+{
+  auto reply = qobject_cast<QNetworkReply*>(this->sender());
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    emit error(handleGirderError(reply, bytes), reply);
+  }
+  else
+  {
+    cJSON* jsonResponse = cJSON_Parse(bytes.constData());
+
+    if (!jsonResponse || jsonResponse->type != cJSON_Array)
+    {
+      emit error(QString("Invalid response to listFolders."));
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+
+    QList<QMap<QString, QString>> rootPathList;
+    for (cJSON* jsonFolder = jsonResponse->child; jsonFolder; jsonFolder = jsonFolder->next)
+    {
+      QMap<QString, QString> entryMap;
+      cJSON* modelTypeItem = cJSON_GetObjectItem(jsonFolder, "_modelType");
+      if (!modelTypeItem || modelTypeItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract model type."));
+        break;
+      }
+      entryMap["type"] = modelTypeItem->valuestring;
+
+      cJSON* idItem = cJSON_GetObjectItem(jsonFolder, "_id");
+      if (!idItem || idItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract id."));
+        break;
+      }
+      entryMap["id"] = idItem->valuestring;
+
+      QString nameField;
+      if (entryMap["type"] == "user")
+        nameField = "login";
+      else
+        nameField = "name";
+
+      cJSON* nameItem = cJSON_GetObjectItem(jsonFolder, nameField.toStdString().c_str());
+      if (!nameItem || nameItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract name."));
+        break;
+      }
+      entryMap["name"] = nameItem->valuestring;
+
+      rootPathList.append(entryMap);
+    }
+
+    emit rootPath(rootPathList);
 
     cJSON_Delete(jsonResponse);
   }

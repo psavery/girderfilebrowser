@@ -209,8 +209,32 @@ public:
   void send();
 
 signals:
-  // <parentType, parentId>
-  void parent(const QPair<QString, QString>& parentInfo);
+  // This map should contain "id", "type", and "name"
+  void parent(const QMap<QString, QString>& parentInfo);
+
+private slots:
+  void finished();
+
+private:
+  QString m_folderId;
+};
+
+class GetFolderRootPathRequest : public GirderRequest
+{
+  Q_OBJECT
+
+public:
+  GetFolderRootPathRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+    const QString& girderToken, const QString& folderId, QObject* parent = 0);
+  ~GetFolderRootPathRequest();
+
+  void send();
+
+signals:
+  // A hierarchy of folders to the root folder. The first item in the
+  // QList should be the user. The rest are folders.
+  // The keys "type", "id", and "name" should be present for each entry.
+  void rootPath(const QList<QMap<QString, QString>>& rootPathList);
 
 private slots:
   void finished();
