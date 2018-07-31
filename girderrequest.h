@@ -283,6 +283,27 @@ private slots:
   void finished();
 };
 
+class GetMyUserRequest : public GirderRequest
+{
+  Q_OBJECT
+
+public:
+  GetMyUserRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+    const QString& girderToken, QObject* parent = 0);
+  ~GetMyUserRequest();
+
+  void send();
+
+signals:
+  // Should contain some information about my user. Includes these keys:
+  // - id
+  // - login
+  void myUser(const QMap<QString, QString>& userInfo);
+
+private slots:
+  void finished();
+};
+
 }
 
 #endif

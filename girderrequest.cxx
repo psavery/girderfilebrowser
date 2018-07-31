@@ -835,4 +835,72 @@ void GetCollectionsRequest::finished()
   reply->deleteLater();
 }
 
+GetMyUserRequest::GetMyUserRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+  const QString& girderToken, QObject* parent)
+  : GirderRequest(networkManager, girderUrl, girderToken, parent)
+{
+}
+
+GetMyUserRequest::~GetMyUserRequest() = default;
+
+void GetMyUserRequest::send()
+{
+  QUrl url(QString("%1/user/me").arg(m_girderUrl));
+
+  QNetworkRequest request(url);
+  request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
+
+  auto reply = m_networkManager->get(request);
+  QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
+}
+
+void GetMyUserRequest::finished()
+{
+  auto reply = qobject_cast<QNetworkReply*>(this->sender());
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    emit error(handleGirderError(reply, bytes), reply);
+  }
+  else
+  {
+    cJSON* jsonResponse = cJSON_Parse(bytes.constData());
+
+    // There should only be one response
+    if (!jsonResponse || jsonResponse->type != cJSON_Object)
+    {
+      emit error(QString("Invalid response to GetMyUserRequest."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+
+    QMap<QString, QString> myInfo;
+    cJSON* loginItem = cJSON_GetObjectItem(jsonResponse, "login");
+    if (!loginItem || loginItem->type != cJSON_String)
+    {
+      emit error(QString("Unable to extract login."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+    myInfo["login"] = loginItem->valuestring;
+
+    cJSON* idItem = cJSON_GetObjectItem(jsonResponse, "_id");
+    if (!idItem || idItem->type != cJSON_String)
+    {
+      emit error(QString("Unable to extract parent id."));
+      reply->deleteLater();
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+    myInfo["id"] = idItem->valuestring;
+
+    emit myUser(myInfo);
+
+    cJSON_Delete(jsonResponse);
+  }
+  reply->deleteLater();
+}
+
 } // end namespace
