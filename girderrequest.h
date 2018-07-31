@@ -243,6 +243,46 @@ private:
   QString m_folderId;
 };
 
+class GetUsersRequest : public GirderRequest
+{
+  Q_OBJECT
+
+public:
+  GetUsersRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+    const QString& girderToken, QObject* parent = 0);
+  ~GetUsersRequest();
+
+  void send();
+
+signals:
+
+  // <userId => loginName>
+  void users(const QMap<QString, QString>& usersMap);
+
+private slots:
+  void finished();
+};
+
+class GetCollectionsRequest : public GirderRequest
+{
+  Q_OBJECT
+
+public:
+  GetCollectionsRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+    const QString& girderToken, QObject* parent = 0);
+  ~GetCollectionsRequest();
+
+  void send();
+
+signals:
+
+  // <collectionId => collectionName>
+  void collections(const QMap<QString, QString>& collectionsMap);
+
+private slots:
+  void finished();
+};
+
 }
 
 #endif

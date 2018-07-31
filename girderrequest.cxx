@@ -690,4 +690,149 @@ void GetFolderRootPathRequest::finished()
   reply->deleteLater();
 }
 
+GetUsersRequest::GetUsersRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+  const QString& girderToken, QObject* parent)
+  : GirderRequest(networkManager, girderUrl, girderToken, parent)
+{
+}
+
+GetUsersRequest::~GetUsersRequest() = default;
+
+void GetUsersRequest::send()
+{
+  QUrlQuery urlQuery;
+  urlQuery.addQueryItem("limit", "0");
+
+  QUrl url(QString("%1/user").arg(m_girderUrl));
+  url.setQuery(urlQuery); // reconstructs the query string from the QUrlQuery
+
+  QNetworkRequest request(url);
+  request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
+
+  auto reply = m_networkManager->get(request);
+  QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
+}
+
+void GetUsersRequest::finished()
+{
+  auto reply = qobject_cast<QNetworkReply*>(this->sender());
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    emit error(handleGirderError(reply, bytes), reply);
+  }
+  else
+  {
+    cJSON* jsonResponse = cJSON_Parse(bytes.constData());
+
+    if (!jsonResponse || jsonResponse->type != cJSON_Array)
+    {
+      emit error(QString("Invalid response to GetUsers."));
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+
+    QMap<QString, QString> usersMap;
+    for (cJSON* jsonItem = jsonResponse->child; jsonItem; jsonItem = jsonItem->next)
+    {
+
+      cJSON* idItem = cJSON_GetObjectItem(jsonItem, "_id");
+      if (!idItem || idItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract user id."));
+        break;
+      }
+      QString id(idItem->valuestring);
+
+      cJSON* loginItem = cJSON_GetObjectItem(jsonItem, "login");
+      if (!loginItem || loginItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract user login."));
+        break;
+      }
+      QString login(loginItem->valuestring);
+
+      usersMap[id] = login;
+    }
+
+    emit users(usersMap);
+
+    cJSON_Delete(jsonResponse);
+  }
+
+  reply->deleteLater();
+}
+
+GetCollectionsRequest::GetCollectionsRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
+  const QString& girderToken, QObject* parent)
+  : GirderRequest(networkManager, girderUrl, girderToken, parent)
+{
+}
+
+GetCollectionsRequest::~GetCollectionsRequest() = default;
+
+void GetCollectionsRequest::send()
+{
+  QUrlQuery urlQuery;
+  urlQuery.addQueryItem("limit", "0");
+
+  QUrl url(QString("%1/collection").arg(m_girderUrl));
+  url.setQuery(urlQuery); // reconstructs the query string from the QUrlQuery
+
+  QNetworkRequest request(url);
+  request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
+
+  auto reply = m_networkManager->get(request);
+  QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
+}
+
+void GetCollectionsRequest::finished()
+{
+  auto reply = qobject_cast<QNetworkReply*>(this->sender());
+  QByteArray bytes = reply->readAll();
+  if (reply->error())
+  {
+    emit error(handleGirderError(reply, bytes), reply);
+  }
+  else
+  {
+    cJSON* jsonResponse = cJSON_Parse(bytes.constData());
+
+    if (!jsonResponse || jsonResponse->type != cJSON_Array)
+    {
+      emit error(QString("Invalid response to GetUsers."));
+      cJSON_Delete(jsonResponse);
+      return;
+    }
+
+    QMap<QString, QString> collectionsMap;
+    for (cJSON* jsonItem = jsonResponse->child; jsonItem; jsonItem = jsonItem->next)
+    {
+      cJSON* idItem = cJSON_GetObjectItem(jsonItem, "_id");
+      if (!idItem || idItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract collection id."));
+        break;
+      }
+      QString id(idItem->valuestring);
+
+      cJSON* nameItem = cJSON_GetObjectItem(jsonItem, "name");
+      if (!nameItem || nameItem->type != cJSON_String)
+      {
+        emit error(QString("Unable to extract collection login."));
+        break;
+      }
+      QString name(nameItem->valuestring);
+
+      collectionsMap[id] = name;
+    }
+
+    emit collections(collectionsMap);
+
+    cJSON_Delete(jsonResponse);
+  }
+
+  reply->deleteLater();
+}
+
 } // end namespace
