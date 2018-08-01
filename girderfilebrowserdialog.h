@@ -35,6 +35,7 @@ class GirderFileBrowserDialog;
 namespace cumulus
 {
 
+// The various kinds of girder requests
 class GirderRequest;
 class ListFoldersRequest;
 class ListItemsRequest;
@@ -49,8 +50,6 @@ class SMTKCUMULUSEXT_EXPORT GirderFileBrowserDialog : public QDialog
 
 public:
   explicit GirderFileBrowserDialog(QNetworkAccessManager* networkAccessManager,
-    const QString& girderUrl = "",
-    const QString& girderToken = "",
     QWidget* parent = nullptr);
 
   virtual ~GirderFileBrowserDialog() override;
@@ -58,6 +57,10 @@ public:
   void setGirderUrl(const QString& url) { m_girderUrl = url; }
   void setGirderToken(const QString& token) { m_girderToken = token; }
 
+  // This will not do anything if an update is currently pending
+  void updateBrowser(const QString& parentName, const QString& parentId, const QString& parentType);
+
+public slots:
   // A convenience function for authentication success
   void setApiUrlAndGirderToken(const QString& url, const QString& token)
   {
@@ -65,35 +68,36 @@ public:
     setGirderToken(token);
   }
 
-  // This will not do anything if an update is currently pending
-  void updateBrowser(const QString& parentName, const QString& parentId, const QString& parentType);
-
 private slots:
   void itemDoubleClicked(const QModelIndex&);
   void goUpDirectory();
   void goHome();
 
-private:
-  void updateCurrentFolders();
-  void updateCurrentItems();
-  void updateRootPath();
-  void errorReceived(const QString& message);
-
+  // We need one of these for each girder request...
   void finishUpdatingFolders(const QMap<QString, QString>& newFolders);
   void finishUpdatingItems(const QMap<QString, QString>& newItems);
   void finishUpdatingRootPath(const QList<QMap<QString, QString> >& newRootpath);
   void finishGoingHome(const QMap<QString, QString>& myUserInfo);
-
-  void updateBrowserList();
+  void finishUpdatingBrowserListForUsers(const QMap<QString, QString>& usersMap);
+  void finishUpdatingBrowserListForCollections(const QMap<QString, QString>& collectionsMap);
   void finishUpdatingBrowserList();
 
-  // The special cases
+  void errorReceived(const QString& message);
+
+private:
+  // The generic updates
+  void updateCurrentFolders();
+  void updateCurrentItems();
+  void updateRootPath();
+
+  void updateBrowserList();
+
+  // The special cases in the top two level directories
   void updateBrowserListForRoot();
   void updateBrowserListForUsers();
-  void finishUpdatingBrowserListForUsers(const QMap<QString, QString>& usersMap);
   void updateBrowserListForCollections();
-  void finishUpdatingBrowserListForCollections(const QMap<QString, QString>& collectionsMap);
 
+  // Update the root path widget
   void updateRootPathWidget();
 
   // Convenience functions...

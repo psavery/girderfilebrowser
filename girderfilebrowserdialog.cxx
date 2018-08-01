@@ -23,15 +23,11 @@ namespace cumulus
 {
 
 GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkManager,
-  const QString& girderUrl,
-  const QString& girderToken,
   QWidget* parent)
   : QDialog(parent)
   , m_ui(new Ui::GirderFileBrowserDialog)
   , m_itemModel(new QStandardItemModel(this))
   , m_networkManager(networkManager)
-  , m_girderUrl(girderUrl)
-  , m_girderToken(girderToken)
   , m_folderIcon(new QIcon(":/icons/folder.png"))
   , m_fileIcon(new QIcon(":/icons/file.png"))
 {
@@ -60,6 +56,7 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   m_updatesPending["items"] = false;
   m_updatesPending["rootPath"] = false;
 
+  // We will start in root
   QString currentParentName = "root";
   QString currentParentId = "";
   QString currentParentType = "root";
@@ -145,21 +142,30 @@ void GirderFileBrowserDialog::updateBrowserListForRoot()
   updateRootPathWidget();
 }
 
+// A convenience function to do three things:
+//   1. Call "send()" on the GirderRequest sender.
+//   2. Create connections for finish condition.
+//   3. Create connections for error condition.
+// Sender must be a GirderRequest object, and Receiver must be
+// a GirderFileBrowserDialog object.
+template<typename Sender, typename Signal, typename Receiver, typename Slot>
+void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Slot slot)
+{
+  sender->send();
+
+  QObject::connect(sender, signal, receiver, slot);
+  QObject::connect(
+    sender, &GirderRequest::error, receiver, &GirderFileBrowserDialog::errorReceived);
+}
+
 void GirderFileBrowserDialog::updateBrowserListForUsers()
 {
   m_getUsersRequest.reset(new GetUsersRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  m_getUsersRequest->send();
-
-  connect(m_getUsersRequest.get(),
+  sendAndConnect(m_getUsersRequest.get(),
     &GetUsersRequest::users,
     this,
     &GirderFileBrowserDialog::finishUpdatingBrowserListForUsers);
-
-  connect(m_getUsersRequest.get(),
-    &GetUsersRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   m_updatesPending["users"] = true;
 }
@@ -205,17 +211,10 @@ void GirderFileBrowserDialog::updateBrowserListForCollections()
   m_getCollectionsRequest.reset(
     new GetCollectionsRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  m_getCollectionsRequest->send();
-
-  connect(m_getCollectionsRequest.get(),
+  sendAndConnect(m_getCollectionsRequest.get(),
     &GetCollectionsRequest::collections,
     this,
     &GirderFileBrowserDialog::finishUpdatingBrowserListForCollections);
-
-  connect(m_getCollectionsRequest.get(),
-    &GetCollectionsRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   m_updatesPending["collections"] = true;
 }
@@ -317,7 +316,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
   }
 
   // This will contain the full list of the path including the root and Users/Collections
-  QList<QMap<QString, QString>> fullRootPath;
+  QList<QMap<QString, QString> > fullRootPath;
 
   if (currentParentName() != "root")
   {
@@ -460,20 +459,12 @@ void GirderFileBrowserDialog::goUpDirectory()
 
 void GirderFileBrowserDialog::goHome()
 {
-  m_getMyUserRequest.reset(
-    new GetMyUserRequest(m_networkManager, m_girderUrl, m_girderToken));
+  m_getMyUserRequest.reset(new GetMyUserRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  m_getMyUserRequest->send();
-
-  connect(m_getMyUserRequest.get(),
+  sendAndConnect(m_getMyUserRequest.get(),
     &GetMyUserRequest::myUser,
     this,
     &GirderFileBrowserDialog::finishGoingHome);
-
-  connect(m_getMyUserRequest.get(),
-    &GetMyUserRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 }
 
 void GirderFileBrowserDialog::finishGoingHome(const QMap<QString, QString>& myUserInfo)
@@ -492,17 +483,10 @@ void GirderFileBrowserDialog::updateCurrentFolders()
   m_updateFoldersRequest.reset(new ListFoldersRequest(
     m_networkManager, m_girderUrl, m_girderToken, currentParentId(), currentParentType()));
 
-  m_updateFoldersRequest->send();
-
-  connect(m_updateFoldersRequest.get(),
+  sendAndConnect(m_updateFoldersRequest.get(),
     &ListFoldersRequest::folders,
     this,
     &GirderFileBrowserDialog::finishUpdatingFolders);
-
-  connect(m_updateFoldersRequest.get(),
-    &ListFoldersRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   m_updatesPending["folders"] = true;
 }
@@ -526,17 +510,10 @@ void GirderFileBrowserDialog::updateCurrentItems()
   m_updateItemsRequest.reset(
     new ListItemsRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
 
-  m_updateItemsRequest->send();
-
-  connect(m_updateItemsRequest.get(),
+  sendAndConnect(m_updateItemsRequest.get(),
     &ListItemsRequest::items,
     this,
     &GirderFileBrowserDialog::finishUpdatingItems);
-
-  connect(m_updateItemsRequest.get(),
-    &ListItemsRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   m_updatesPending["items"] = true;
 }
@@ -560,17 +537,10 @@ void GirderFileBrowserDialog::updateRootPath()
   m_updateRootPathRequest.reset(
     new GetFolderRootPathRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
 
-  m_updateRootPathRequest->send();
-
-  connect(m_updateRootPathRequest.get(),
+  sendAndConnect(m_updateRootPathRequest.get(),
     &GetFolderRootPathRequest::rootPath,
     this,
     &GirderFileBrowserDialog::finishUpdatingRootPath);
-
-  connect(m_updateRootPathRequest.get(),
-    &GetFolderRootPathRequest::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   m_updatesPending["rootPath"] = true;
 }
