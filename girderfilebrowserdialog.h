@@ -50,13 +50,14 @@ class SMTKCUMULUSEXT_EXPORT GirderFileBrowserDialog : public QDialog
 public:
   explicit GirderFileBrowserDialog(QNetworkAccessManager* networkAccessManager,
     const QString& girderUrl,
-    const QString& girderToken,
+    const QString& girderToken = "",
     QWidget* parent = nullptr);
 
   virtual ~GirderFileBrowserDialog() override;
 
-  QString girderUrl() const { return m_girderUrl; }
   void setGirderUrl(const QString& url) { m_girderUrl = url; }
+
+  void setGirderToken(const QString& token) { m_girderToken = token; }
 
   // This will not do anything if an update is currently pending
   void updateBrowser(const QString& parentName, const QString& parentId, const QString& parentType);

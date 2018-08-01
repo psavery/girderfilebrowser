@@ -10,13 +10,11 @@
 
 #include <QByteArray>
 #include <QDebug>
-#include <QEventLoop>
 #include <QList>
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QString>
-#include <QTimer>
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVariant>
@@ -33,9 +31,13 @@ GirderAuthenticator::GirderAuthenticator(const QString& girderUrl,
 {
 }
 
-QString GirderAuthenticator::authenticateApiKey(const QString& apiKey)
+GirderAuthenticator::~GirderAuthenticator() = default;
+
+void GirderAuthenticator::authenticateApiKey(const QString& apiKey)
 {
-  QString girderToken;
+  // Only submit one request at a time.
+  if (m_pendingReply)
+    return;
 
   static const QString& tokenDuration = "90";
 
@@ -48,56 +50,23 @@ QString GirderAuthenticator::authenticateApiKey(const QString& apiKey)
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
-  bool timedOut = false;
+  m_pendingReply.reset(m_networkManager->post(request, postData));
 
-  QNetworkReply* reply = postAndWaitForReply(request, postData, timedOut);
-
-  if (timedOut)
-  {
-    qDebug() << "Error: timeout occurred during girder api key authentication!";
-    reply->deleteLater();
-    return girderToken;
-  }
-
-  girderToken = getTokenFromReply(reply);
-
-  reply->deleteLater();
-
-  return girderToken;
+  connect(m_pendingReply.get(), &QNetworkReply::finished, this, &GirderAuthenticator::finishAuthenticatingApiKey);
 }
 
-// Returns true if a reply was received, and false on timeout
-QNetworkReply* GirderAuthenticator::postAndWaitForReply(const QNetworkRequest& request,
-                                          const QByteArray& postData,
-                                          bool& timedOut,
-                                          int timeOutMilliseconds)
+QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply,
+                                               QString& errorMessage)
 {
-  // Make a timer for timeout
-  QTimer timer;
-
-  // Quit the event loop on timeout and indicate that timeout occurred
-  connect(&timer, &QTimer::timeout, [&timedOut]() { timedOut = true; });
-
-  // Wait until we get a response or the timeout occurs
-  QEventLoop loop;
-  QNetworkReply* reply = m_networkManager->post(request, postData);
-  connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-  connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-  timer.start(timeOutMilliseconds);
-  loop.exec();
-
-  return reply;
-}
-
-QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply)
-{
+  errorMessage.clear();
   QString girderToken;
 
   QByteArray bytes = reply->readAll();
   if (reply->error())
   {
-    qDebug() << "Error: api authentication failed!";
-    qDebug() << "Response from server was: " << bytes;
+    errorMessage += "Error: api key authentication failed!\n";
+    errorMessage += "Response from server was: " + bytes + "\n";
+    return "";
   }
   else
   {
@@ -113,11 +82,31 @@ QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply)
 
     if (girderToken.isEmpty())
     {
-      qDebug() << "Error: Girder response did not set girderToken!";
+      errorMessage += "Error: Girder response did not set girderToken!\n";
+      return "";
     }
   }
 
   return girderToken;
+}
+
+void GirderAuthenticator::finishAuthenticatingApiKey()
+{
+  QString errorMessage;
+  QString girderToken = getTokenFromReply(m_pendingReply.get(), errorMessage);
+  emit deleteReplyLater();
+  if (girderToken.isEmpty() || !errorMessage.isEmpty()) {
+    errorMessage += "Api key authentication failed!\n";
+    emit authenticationErrored(errorMessage);
+    return;
+  }
+
+  emit authenticationSucceeded(girderToken);
+}
+
+void GirderAuthenticator::deleteReplyLater()
+{
+  m_pendingReply.reset();
 }
 
 } // end namespace

@@ -14,6 +14,8 @@
 #ifndef __smtk_extension_cumulus_girderauthenticator_h
 #define __smtk_extension_cumulus_girderauthenticator_h
 
+#include <memory>
+
 #include <QObject>
 #include <QString>
 
@@ -33,23 +35,28 @@ class SMTKCUMULUSEXT_EXPORT GirderAuthenticator : public QObject
 public:
   GirderAuthenticator(const QString& girderUrl, QNetworkAccessManager* networkManager);
 
-  // Returns a girder token or an empty string on failure
-  QString authenticateApiKey(const QString& apiKey);
+  virtual ~GirderAuthenticator() override;
+
+  void authenticateApiKey(const QString& apiKey);
+
+signals:
+  void authenticationSucceeded(const QString& girderToken);
+  void authenticationErrored(const QString& errorMessage);
 
 private:
-  // Send an http post with the network manager and wait for a reply.
-  // Times out after a specified amount of time.
-  // If a time out occurs, timedOut will be set to true.
-  QNetworkReply* postAndWaitForReply(const QNetworkRequest& request,
-    const QByteArray& postData,
-    bool& timedOut,
-    int timeOutMilliseconds = 10000);
-
   // Read the girder token from a reply
-  static QString getTokenFromReply(QNetworkReply* reply);
+  // If errorMessage is set, an error occurred.
+  static QString getTokenFromReply(QNetworkReply* reply, QString& errorMessage);
 
+private slots:
+  void finishAuthenticatingApiKey();
+  // Deletes the reply by posting a event in the event loop
+  void deleteReplyLater();
+
+private:
   QNetworkAccessManager* m_networkManager;
   QString m_girderUrl;
+  std::unique_ptr<QNetworkReply> m_pendingReply;
 };
 
 } // end namespace

@@ -26,13 +26,15 @@ int main(int argc, char* argv[])
   const char* apiUrl = std::getenv("GIRDER_API_URL");
   const char* apiKey = std::getenv("GIRDER_API_KEY");
 
-  if (!apiUrl) {
+  if (!apiUrl)
+  {
     std::cerr << "Error: the GIRDER_API_URL environment variable "
               << "must be set for the api url!\n";
     return EXIT_FAILURE;
   }
 
-  if (!apiKey) {
+  if (!apiKey)
+  {
     std::cerr << "Error: the GIRDER_API_KEY environment variable "
               << "must be set for the api key!\n";
     return EXIT_FAILURE;
@@ -40,16 +42,28 @@ int main(int argc, char* argv[])
 
   std::unique_ptr<QNetworkAccessManager> networkManager(new QNetworkAccessManager);
 
-  cumulus::GirderAuthenticator girderAuthenticator(apiUrl, networkManager.get());
-  QString girderToken = girderAuthenticator.authenticateApiKey(apiKey);
-  if (girderToken.isEmpty()) {
-    std::cerr << "Error: failed to receive a girder token from the server!\n";
-    return EXIT_FAILURE;
-  }
+  using cumulus::GirderAuthenticator;
+  GirderAuthenticator girderAuthenticator(apiUrl, networkManager.get());
+  girderAuthenticator.authenticateApiKey(apiKey);
 
-  cumulus::GirderFileBrowserDialog gfbDialog(networkManager.get(), apiUrl, girderToken);
-  gfbDialog.setGirderUrl(apiUrl);
-  gfbDialog.show();
+  using cumulus::GirderFileBrowserDialog;
+  GirderFileBrowserDialog gfbDialog(networkManager.get(), apiUrl);
+
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationSucceeded,
+    &gfbDialog,
+    &GirderFileBrowserDialog::setGirderToken);
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationSucceeded,
+    &gfbDialog,
+    &GirderFileBrowserDialog::show);
+
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationErrored,
+    [](const QString& errorMessage) {
+      std::cerr << "Girder authentication failed!\n";
+      std::cerr << "Error message is " << errorMessage.toStdString() << "\n";
+    });
 
   return app.exec();
 }
