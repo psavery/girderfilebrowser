@@ -23,17 +23,17 @@ int main(int argc, char* argv[])
 {
   QApplication app(argc, argv);
 
-  const char* apiUrl = std::getenv("GIRDER_API_URL");
-  const char* apiKey = std::getenv("GIRDER_API_KEY");
+  QString apiUrl = std::getenv("GIRDER_API_URL");
+  QString apiKey = std::getenv("GIRDER_API_KEY");
 
-  if (!apiUrl)
+  if (apiUrl.isEmpty())
   {
     std::cerr << "Error: the GIRDER_API_URL environment variable "
               << "must be set for the api url!\n";
     return EXIT_FAILURE;
   }
 
-  if (!apiKey)
+  if (apiKey.isEmpty())
   {
     std::cerr << "Error: the GIRDER_API_KEY environment variable "
               << "must be set for the api key!\n";
