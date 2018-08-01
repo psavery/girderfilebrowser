@@ -33,7 +33,7 @@ class SMTKCUMULUSEXT_EXPORT GirderAuthenticator : public QObject
   Q_OBJECT
 
 public:
-  GirderAuthenticator(const QString& girderUrl, QNetworkAccessManager* networkManager);
+  GirderAuthenticator(const QString& girderUrl, QNetworkAccessManager* networkManager, QObject* parent = nullptr);
 
   virtual ~GirderAuthenticator() override;
 

@@ -25,8 +25,9 @@ namespace cumulus
 {
 
 GirderAuthenticator::GirderAuthenticator(const QString& girderUrl,
-  QNetworkAccessManager* networkManager)
-  : m_networkManager(networkManager)
+  QNetworkAccessManager* networkManager, QObject* parent)
+  : QObject(parent)
+  , m_networkManager(networkManager)
   , m_girderUrl(girderUrl)
 {
 }
