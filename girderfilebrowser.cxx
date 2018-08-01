@@ -18,52 +18,69 @@
 
 #include "girderauthenticator.h"
 #include "girderfilebrowserdialog.h"
+#include "girderlogindialog.h"
 
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv);
 
+  std::unique_ptr<QNetworkAccessManager> networkManager(new QNetworkAccessManager);
+
+  using cumulus::GirderLoginDialog;
+  GirderLoginDialog loginDialog;
+
+  using cumulus::GirderAuthenticator;
+  GirderAuthenticator girderAuthenticator(networkManager.get());
+
+  using cumulus::GirderFileBrowserDialog;
+  GirderFileBrowserDialog gfbDialog(networkManager.get());
+
   QString apiUrl = std::getenv("GIRDER_API_URL");
   QString apiKey = std::getenv("GIRDER_API_KEY");
 
-  if (apiUrl.isEmpty())
+  if (!apiUrl.isEmpty())
+    loginDialog.setApiUrl(apiUrl);
+
+  // Attempt api key authentication if both environment variables are present
+  if (!apiUrl.isEmpty() && !apiKey.isEmpty())
   {
-    std::cerr << "Error: the GIRDER_API_URL environment variable "
-              << "must be set for the api url!\n";
-    return EXIT_FAILURE;
+    girderAuthenticator.authenticateApiKey(apiUrl, apiKey);
   }
 
-  if (apiKey.isEmpty())
-  {
-    std::cerr << "Error: the GIRDER_API_KEY environment variable "
-              << "must be set for the api key!\n";
-    return EXIT_FAILURE;
-  }
+  // This will be hidden automatically if api key authentication succeeds
+  loginDialog.show();
 
-  std::unique_ptr<QNetworkAccessManager> networkManager(new QNetworkAccessManager);
+  // Connect the "ok" button of the login dialog to the girder authenticator
+  QObject::connect(&loginDialog,
+    &GirderLoginDialog::beginAuthentication,
+    &girderAuthenticator,
+    &GirderAuthenticator::authenticatePassword);
+  // If authentication fails, print a message on the login dialog
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationErrored,
+    &loginDialog,
+    &GirderLoginDialog::authenticationFailed);
+  // If authentication fails, also print it to the terminal
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationErrored,
+    [](const QString& errorMessage) {
+      std::cerr << errorMessage.toStdString() << "\n";
+    });
 
-  using cumulus::GirderAuthenticator;
-  GirderAuthenticator girderAuthenticator(apiUrl, networkManager.get());
-  girderAuthenticator.authenticateApiKey(apiKey);
-
-  using cumulus::GirderFileBrowserDialog;
-  GirderFileBrowserDialog gfbDialog(networkManager.get(), apiUrl);
-
+  // If we succeed in authenticating, hide the login dialog, set the
+  // girder token, and show the browser window.
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationSucceeded,
+    &loginDialog,
+    &GirderLoginDialog::hide);
   QObject::connect(&girderAuthenticator,
     &GirderAuthenticator::authenticationSucceeded,
     &gfbDialog,
-    &GirderFileBrowserDialog::setGirderToken);
+    &GirderFileBrowserDialog::setApiUrlAndGirderToken);
   QObject::connect(&girderAuthenticator,
     &GirderAuthenticator::authenticationSucceeded,
     &gfbDialog,
     &GirderFileBrowserDialog::show);
-
-  QObject::connect(&girderAuthenticator,
-    &GirderAuthenticator::authenticationErrored,
-    [](const QString& errorMessage) {
-      std::cerr << "Girder authentication failed!\n";
-      std::cerr << "Error message is:\n\"" << errorMessage.toStdString() << "\"\n";
-    });
 
   return app.exec();
 }

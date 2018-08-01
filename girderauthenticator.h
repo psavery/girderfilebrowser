@@ -23,7 +23,6 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
-class QNetworkRequest;
 
 namespace cumulus
 {
@@ -33,15 +32,16 @@ class SMTKCUMULUSEXT_EXPORT GirderAuthenticator : public QObject
   Q_OBJECT
 
 public:
-  GirderAuthenticator(const QString& girderUrl, QNetworkAccessManager* networkManager, QObject* parent = nullptr);
+  GirderAuthenticator(QNetworkAccessManager* networkManager,
+    QObject* parent = nullptr);
 
   virtual ~GirderAuthenticator() override;
 
-  void authenticateApiKey(const QString& apiKey);
-  void authenticatePassword(const QString& username, const QString& password);
+  void authenticateApiKey(const QString& apiUrl, const QString& apiKey);
+  void authenticatePassword(const QString& apiUrl, const QString& username, const QString& password);
 
 signals:
-  void authenticationSucceeded(const QString& girderToken);
+  void authenticationSucceeded(const QString& apiUrl, const QString& girderToken);
   void authenticationErrored(const QString& errorMessage);
 
 private slots:
@@ -49,7 +49,7 @@ private slots:
 
 private:
   QNetworkAccessManager* m_networkManager;
-  QString m_girderUrl;
+  QString m_apiUrl;
   std::unique_ptr<QNetworkReply> m_pendingReply;
 };
 

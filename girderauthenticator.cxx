@@ -14,6 +14,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkCookie>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QString>
 #include <QUrl>
 #include <QUrlQuery>
@@ -24,17 +25,15 @@
 namespace cumulus
 {
 
-GirderAuthenticator::GirderAuthenticator(const QString& girderUrl,
-  QNetworkAccessManager* networkManager, QObject* parent)
+GirderAuthenticator::GirderAuthenticator(QNetworkAccessManager* networkManager, QObject* parent)
   : QObject(parent)
   , m_networkManager(networkManager)
-  , m_girderUrl(girderUrl)
 {
 }
 
 GirderAuthenticator::~GirderAuthenticator() = default;
 
-void GirderAuthenticator::authenticateApiKey(const QString& apiKey)
+void GirderAuthenticator::authenticateApiKey(const QString& apiUrl, const QString& apiKey)
 {
   // Only submit one request at a time.
   if (m_pendingReply)
@@ -46,27 +45,34 @@ void GirderAuthenticator::authenticateApiKey(const QString& apiKey)
   postData.append(("key=" + apiKey + "&").toUtf8());
   postData.append(("duration=" + tokenDuration).toUtf8());
 
-  QUrl url(QString("%1/api_key/token").arg(m_girderUrl));
+  QUrl url(QString("%1/api_key/token").arg(apiUrl));
 
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
+  // No more authentication requests can be sent until m_pendingReply is null
   m_pendingReply.reset(m_networkManager->post(request, postData));
 
   connect(m_pendingReply.get(),
     &QNetworkReply::finished,
     this,
     &GirderAuthenticator::finishAuthentication);
+
+  // Cache this so finishAuthentication can read it
+  m_apiUrl = apiUrl;
 }
 
-void GirderAuthenticator::authenticatePassword(const QString& username, const QString& password)
+void GirderAuthenticator::authenticatePassword(const QString& apiUrl,
+  const QString& username,
+  const QString& password)
 {
   // Only submit one request at a time.
   if (m_pendingReply)
     return;
 
-  QUrl url(QString("%1/user/authentication").arg(m_girderUrl));
+  QUrl url(QString("%1/user/authentication").arg(apiUrl));
 
+  // Basic http authentication scheme
   QString concatenated = username + ":" + password;
   QByteArray data = concatenated.toLocal8Bit().toBase64();
   QString headerData = "Basic " + data;
@@ -75,18 +81,27 @@ void GirderAuthenticator::authenticatePassword(const QString& username, const QS
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
   request.setRawHeader("Authorization", headerData.toLocal8Bit());
 
+  // No more authentication requests can be sent until m_pendingReply is null
   m_pendingReply.reset(m_networkManager->get(request));
 
   connect(m_pendingReply.get(),
     &QNetworkReply::finished,
     this,
     &GirderAuthenticator::finishAuthentication);
+
+  // Cache this so finishAuthentication can read it
+  m_apiUrl = apiUrl;
 }
 
 void GirderAuthenticator::finishAuthentication()
 {
-  // Take ownership of the reply
+  // This should be cached from earlier
+  QString apiUrl = m_apiUrl;
+
+  // Take ownership of the reply. This will also allow more authentication
+  // requests to occur.
   std::unique_ptr<QNetworkReply> reply = std::move(m_pendingReply);
+
   QString girderToken;
   QString errorMessage;
 
@@ -120,12 +135,12 @@ void GirderAuthenticator::finishAuthentication()
 
   if (girderToken.isEmpty() || !errorMessage.isEmpty())
   {
-    errorMessage += "Api key authentication failed!\n";
+    errorMessage += "Authentication failed!\n";
     emit authenticationErrored(errorMessage);
     return;
   }
 
-  emit authenticationSucceeded(girderToken);
+  emit authenticationSucceeded(apiUrl, girderToken);
 }
 
 } // end namespace
