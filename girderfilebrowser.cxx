@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     &GirderAuthenticator::authenticationErrored,
     [](const QString& errorMessage) {
       std::cerr << "Girder authentication failed!\n";
-      std::cerr << "Error message is " << errorMessage.toStdString() << "\n";
+      std::cerr << "Error message is:\n\"" << errorMessage.toStdString() << "\"\n";
     });
 
   return app.exec();
