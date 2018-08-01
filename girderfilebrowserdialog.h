@@ -62,24 +62,13 @@ public:
 
 public slots:
   // A convenience function for authentication success
-  void setApiUrlAndGirderToken(const QString& url, const QString& token)
-  {
-    setGirderUrl(url);
-    setGirderToken(token);
-  }
+  void setApiUrlAndGirderToken(const QString& url, const QString& token);
 
 private slots:
   void itemDoubleClicked(const QModelIndex&);
   void goUpDirectory();
   void goHome();
 
-  // We need one of these for each girder request...
-  void finishUpdatingFolders(const QMap<QString, QString>& newFolders);
-  void finishUpdatingItems(const QMap<QString, QString>& newItems);
-  void finishUpdatingRootPath(const QList<QMap<QString, QString> >& newRootpath);
-  void finishGoingHome(const QMap<QString, QString>& myUserInfo);
-  void finishUpdatingBrowserListForUsers(const QMap<QString, QString>& usersMap);
-  void finishUpdatingBrowserListForCollections(const QMap<QString, QString>& collectionsMap);
   void finishUpdatingBrowserList();
 
   void errorReceived(const QString& message);
@@ -92,13 +81,16 @@ private:
 
   void updateBrowserList();
 
+  // Checks to see if all steps are complete and there are no errors
+  void updateBrowserListIfReady();
+
   // The special cases in the top two level directories
   void updateBrowserListForRoot();
   void updateBrowserListForUsers();
   void updateBrowserListForCollections();
 
-  // A general update function called by finishUpdatingBrowserListForUsers() and
-  // finishUpdatingBrowserListForCollections().
+  // A general update function called by updateBrowserListForUsers() and
+  // updateBrowserListForCollections()
   void updateSecondDirectoryLevel(const QString& type, const QMap<QString, QString>& map);
 
   // Update the root path widget
@@ -110,10 +102,10 @@ private:
   QString currentParentType() const { return m_currentParentInfo.value("type"); }
 
   // Are updates pending?
-  bool updatesPending() const;
+  bool browserListUpdatesPending() const;
 
   // Did any update errors occur?
-  bool updateErrors() const { return m_updateErrorOccurred; }
+  bool browserListUpdateErrors() const { return m_browserListUpdateErrorOccurred; }
 
   // Members
   std::unique_ptr<Ui::GirderFileBrowserDialog> m_ui;
@@ -141,9 +133,9 @@ private:
   std::unique_ptr<GetMyUserRequest> m_getMyUserRequest;
 
   // Are there any updates pending?
-  QMap<QString, bool> m_updatesPending;
+  QMap<QString, bool> m_browserListUpdatesPending;
   // Did any update errors occur?
-  bool m_updateErrorOccurred;
+  bool m_browserListUpdateErrorOccurred;
 
   // Information about the current parent
   QMap<QString, QString> m_currentParentInfo;
@@ -156,6 +148,19 @@ private:
   std::unique_ptr<QIcon> m_folderIcon;
   std::unique_ptr<QIcon> m_fileIcon;
 };
+
+inline void GirderFileBrowserDialog::setApiUrlAndGirderToken(const QString& url,
+  const QString& token)
+{
+  setGirderUrl(url);
+  setGirderToken(token);
+}
+
+inline void GirderFileBrowserDialog::updateBrowserListIfReady()
+{
+  if (!browserListUpdatesPending() && !browserListUpdateErrors())
+    finishUpdatingBrowserList();
+}
 
 } // end of namespace
 
