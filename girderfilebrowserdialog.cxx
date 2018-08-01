@@ -149,7 +149,7 @@ void GirderFileBrowserDialog::updateBrowserListForRoot()
 // Sender must be a GirderRequest object, and Receiver must be
 // a GirderFileBrowserDialog object.
 template<typename Sender, typename Signal, typename Receiver, typename Slot>
-void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Slot slot)
+static void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Slot slot)
 {
   sender->send();
 
