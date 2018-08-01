@@ -97,6 +97,10 @@ private:
   void updateBrowserListForUsers();
   void updateBrowserListForCollections();
 
+  // A general update function called by finishUpdatingBrowserListForUsers() and
+  // finishUpdatingBrowserListForCollections().
+  void updateSecondDirectoryLevel(const QString& type, const QMap<QString, QString>& map);
+
   // Update the root path widget
   void updateRootPathWidget();
 
@@ -105,7 +109,10 @@ private:
   QString currentParentId() const { return m_currentParentInfo.value("id"); }
   QString currentParentType() const { return m_currentParentInfo.value("type"); }
 
+  // Are updates pending?
   bool updatesPending() const;
+
+  // Did any update errors occur?
   bool updateErrors() const { return m_updateErrorOccurred; }
 
   // Members
@@ -116,7 +123,7 @@ private:
   QString m_girderUrl;
   QString m_girderToken;
 
-  // These map ids to names
+  // These map ids to names. They are used by updateBrowserList().
   QMap<QString, QString> m_currentFolders;
   QMap<QString, QString> m_currentItems;
   // A hierarchy of folders to the root folder. The first item in the
@@ -124,6 +131,7 @@ private:
   // The keys "type", "id", and "name" should be present for each entry.
   QList<QMap<QString, QString> > m_currentRootPath;
 
+  // Our requests.
   // These will be deleted when a new request is made.
   std::unique_ptr<ListFoldersRequest> m_updateFoldersRequest;
   std::unique_ptr<ListItemsRequest> m_updateItemsRequest;
@@ -132,9 +140,12 @@ private:
   std::unique_ptr<GetCollectionsRequest> m_getCollectionsRequest;
   std::unique_ptr<GetMyUserRequest> m_getMyUserRequest;
 
+  // Are there any updates pending?
   QMap<QString, bool> m_updatesPending;
+  // Did any update errors occur?
   bool m_updateErrorOccurred;
 
+  // Information about the current parent
   QMap<QString, QString> m_currentParentInfo;
 
   // Cache info for each row so we can use it when the user double clicks

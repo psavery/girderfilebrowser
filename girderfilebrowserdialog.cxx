@@ -34,22 +34,26 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   m_ui->setupUi(this);
 
   m_ui->list_fileBrowser->setModel(m_itemModel.get());
-  m_ui->list_fileBrowser->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
 
+  // Upon item double-clicked...
   connect(m_ui->list_fileBrowser,
     &QAbstractItemView::doubleClicked,
     this,
     &GirderFileBrowserDialog::itemDoubleClicked);
+
   // This is if the user presses the "enter" key... Do the same thing as double-click.
   connect(m_ui->list_fileBrowser,
     &QAbstractItemView::activated,
     this,
     &GirderFileBrowserDialog::itemDoubleClicked);
+
+  // Connect buttons
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
   connect(m_ui->push_goHome, &QPushButton::pressed, this, &GirderFileBrowserDialog::goHome);
 
+  // These indicate if a request is currently pending
   m_updatesPending["users"] = false;
   m_updatesPending["collections"] = false;
   m_updatesPending["folders"] = false;
@@ -126,9 +130,9 @@ void GirderFileBrowserDialog::updateBrowserListForRoot()
   {
     QString name;
     if (currentRow == 0)
-      name = "Users";
-    else if (currentRow == 1)
       name = "Collections";
+    else if (currentRow == 1)
+      name = "Users";
 
     m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
     QMap<QString, QString> rowInfo;
@@ -170,42 +174,6 @@ void GirderFileBrowserDialog::updateBrowserListForUsers()
   m_updatesPending["users"] = true;
 }
 
-void GirderFileBrowserDialog::finishUpdatingBrowserListForUsers(
-  const QMap<QString, QString>& usersMap)
-{
-  m_updatesPending["users"] = false;
-
-  int numRows = usersMap.keys().size();
-  m_itemModel->setRowCount(numRows);
-  m_itemModel->setColumnCount(1);
-
-  m_cachedRowInfo.clear();
-  m_itemModel->clear();
-
-  int currentRow = 0;
-
-  // Let's sort these by name. QMap sorts by key.
-  QMap<QString, QString> sortedByName;
-  for (const auto& id : usersMap.keys())
-    sortedByName[usersMap.value(id)] = id;
-
-  for (const auto& name : sortedByName.keys())
-  {
-    QString id = sortedByName[name];
-    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
-
-    QMap<QString, QString> rowInfo;
-    rowInfo["type"] = "user";
-    rowInfo["id"] = id;
-    rowInfo["name"] = name;
-    m_cachedRowInfo.append(rowInfo);
-    ++currentRow;
-  }
-
-  m_currentRootPath.clear();
-  updateRootPathWidget();
-}
-
 void GirderFileBrowserDialog::updateBrowserListForCollections()
 {
   m_getCollectionsRequest.reset(
@@ -219,12 +187,11 @@ void GirderFileBrowserDialog::updateBrowserListForCollections()
   m_updatesPending["collections"] = true;
 }
 
-void GirderFileBrowserDialog::finishUpdatingBrowserListForCollections(
-  const QMap<QString, QString>& collectionsMap)
+// Type is probably either "user" or "collection"
+void GirderFileBrowserDialog::updateSecondDirectoryLevel(const QString& type,
+  const QMap<QString, QString>& map)
 {
-  m_updatesPending["collections"] = false;
-
-  int numRows = collectionsMap.keys().size();
+  int numRows = map.keys().size();
   m_itemModel->setRowCount(numRows);
   m_itemModel->setColumnCount(1);
 
@@ -235,8 +202,8 @@ void GirderFileBrowserDialog::finishUpdatingBrowserListForCollections(
 
   // Let's sort these by name. QMap sorts by key.
   QMap<QString, QString> sortedByName;
-  for (const auto& id : collectionsMap.keys())
-    sortedByName[collectionsMap.value(id)] = id;
+  for (const auto& id : map.keys())
+    sortedByName[map.value(id)] = id;
 
   for (const auto& name : sortedByName.keys())
   {
@@ -244,7 +211,7 @@ void GirderFileBrowserDialog::finishUpdatingBrowserListForCollections(
     m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
 
     QMap<QString, QString> rowInfo;
-    rowInfo["type"] = "collection";
+    rowInfo["type"] = type;
     rowInfo["id"] = id;
     rowInfo["name"] = name;
     m_cachedRowInfo.append(rowInfo);
@@ -253,6 +220,20 @@ void GirderFileBrowserDialog::finishUpdatingBrowserListForCollections(
 
   m_currentRootPath.clear();
   updateRootPathWidget();
+}
+
+void GirderFileBrowserDialog::finishUpdatingBrowserListForUsers(
+  const QMap<QString, QString>& usersMap)
+{
+  m_updatesPending["users"] = false;
+  updateSecondDirectoryLevel("user", usersMap);
+}
+
+void GirderFileBrowserDialog::finishUpdatingBrowserListForCollections(
+  const QMap<QString, QString>& collectionsMap)
+{
+  m_updatesPending["collections"] = false;
+  updateSecondDirectoryLevel("collection", collectionsMap);
 }
 
 void GirderFileBrowserDialog::finishUpdatingBrowserList()
