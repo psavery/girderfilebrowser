@@ -52,21 +52,50 @@ void GirderAuthenticator::authenticateApiKey(const QString& apiKey)
 
   m_pendingReply.reset(m_networkManager->post(request, postData));
 
-  connect(m_pendingReply.get(), &QNetworkReply::finished, this, &GirderAuthenticator::finishAuthenticatingApiKey);
+  connect(m_pendingReply.get(),
+    &QNetworkReply::finished,
+    this,
+    &GirderAuthenticator::finishAuthentication);
 }
 
-QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply,
-                                               QString& errorMessage)
+void GirderAuthenticator::authenticatePassword(const QString& username, const QString& password)
 {
-  errorMessage.clear();
+  // Only submit one request at a time.
+  if (m_pendingReply)
+    return;
+
+  QUrl url(QString("%1/user/authentication").arg(m_girderUrl));
+
+  QString concatenated = username + ":" + password;
+  QByteArray data = concatenated.toLocal8Bit().toBase64();
+  QString headerData = "Basic " + data;
+
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+  request.setRawHeader("Authorization", headerData.toLocal8Bit());
+
+  m_pendingReply.reset(m_networkManager->get(request));
+
+  connect(m_pendingReply.get(),
+    &QNetworkReply::finished,
+    this,
+    &GirderAuthenticator::finishAuthentication);
+}
+
+void GirderAuthenticator::finishAuthentication()
+{
+  // Take ownership of the reply
+  std::unique_ptr<QNetworkReply> reply = std::move(m_pendingReply);
   QString girderToken;
+  QString errorMessage;
 
   QByteArray bytes = reply->readAll();
   if (reply->error())
   {
-    errorMessage += "Error: api key authentication failed!\n";
-    errorMessage += "Response from server was: " + bytes + "\n";
-    return "";
+    errorMessage += "Error: authentication failed!\n";
+    errorMessage += "Response from server was:\n" + bytes + "\n";
+    emit authenticationErrored(errorMessage);
+    return;
   }
   else
   {
@@ -83,30 +112,19 @@ QString GirderAuthenticator::getTokenFromReply(QNetworkReply* reply,
     if (girderToken.isEmpty())
     {
       errorMessage += "Error: Girder response did not set girderToken!\n";
-      return "";
+      emit authenticationErrored(errorMessage);
+      return;
     }
   }
 
-  return girderToken;
-}
-
-void GirderAuthenticator::finishAuthenticatingApiKey()
-{
-  QString errorMessage;
-  QString girderToken = getTokenFromReply(m_pendingReply.get(), errorMessage);
-  emit deleteReplyLater();
-  if (girderToken.isEmpty() || !errorMessage.isEmpty()) {
+  if (girderToken.isEmpty() || !errorMessage.isEmpty())
+  {
     errorMessage += "Api key authentication failed!\n";
     emit authenticationErrored(errorMessage);
     return;
   }
 
   emit authenticationSucceeded(girderToken);
-}
-
-void GirderAuthenticator::deleteReplyLater()
-{
-  m_pendingReply.reset();
 }
 
 } // end namespace

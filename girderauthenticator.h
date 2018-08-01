@@ -38,20 +38,14 @@ public:
   virtual ~GirderAuthenticator() override;
 
   void authenticateApiKey(const QString& apiKey);
+  void authenticatePassword(const QString& username, const QString& password);
 
 signals:
   void authenticationSucceeded(const QString& girderToken);
   void authenticationErrored(const QString& errorMessage);
 
-private:
-  // Read the girder token from a reply
-  // If errorMessage is set, an error occurred.
-  static QString getTokenFromReply(QNetworkReply* reply, QString& errorMessage);
-
 private slots:
-  void finishAuthenticatingApiKey();
-  // Deletes the reply by posting a event in the event loop
-  void deleteReplyLater();
+  void finishAuthentication();
 
 private:
   QNetworkAccessManager* m_networkManager;
