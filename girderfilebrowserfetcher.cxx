@@ -206,16 +206,12 @@ void GirderFileBrowserFetcher::finishGettingSecondLevelFolderInformation(const Q
   // We have no files for the second directory level
   QList<QMap<QString, QString> > files;
 
+  QMap<QString, QString> rootInfo;
+  rootInfo["name"] = "root";
+  rootInfo["id"] = "";
+  rootInfo["type"] = "root";
 
-// We currently do not put in any root path information here
-//  QMap<QString, QString> rootInfo;
-//  rootInfo["name"] = "root";
-//  rootInfo["id"] = "";
-//  rootInfo["type"] = "root";
-//
-//  QList<QMap<QString, QString> > rootPath{ rootInfo };
-
-  QList<QMap<QString, QString> > rootPath;
+  QList<QMap<QString, QString> > rootPath{ rootInfo };
 
   emit folderInformation(m_currentParentInfo, folders, files, rootPath);
 }
@@ -303,13 +299,71 @@ void GirderFileBrowserFetcher::getContainingItems()
   m_folderRequestPending["items"] = true;
 }
 
+void GirderFileBrowserFetcher::prependNeededRootPathItems()
+{
+  // This will add /root and /Users or /Collections if needed
+  QList<QMap<QString, QString> > prependedRootPathItems;
+
+  if (currentParentName() != "root")
+  {
+    QMap<QString, QString> rootEntry;
+    // The root button
+    rootEntry["name"] = "root";
+    rootEntry["id"] = "";
+    rootEntry["type"] = "root";
+    prependedRootPathItems.append(rootEntry);
+  }
+
+  bool needUsers = false;
+  bool needCollections = false;
+
+  // For the generic case
+  if (!m_currentRootPath.isEmpty())
+  {
+    const auto& topPathItem = m_currentRootPath.front();
+    QString topItemType = topPathItem.value("type");
+    if (topItemType == "user")
+      needUsers = true;
+    else if (topItemType == "collection")
+      needCollections = true;
+  }
+
+  if (currentParentType() == "user")
+    needUsers = true;
+  else if (currentParentType() == "collection")
+    needCollections = true;
+
+  if (needUsers)
+  {
+    QMap<QString, QString> usersEntry;
+    // Users button
+    usersEntry["name"] = "Users";
+    usersEntry["id"] = "";
+    usersEntry["type"] = "Users";
+    prependedRootPathItems.append(usersEntry);
+  }
+  else if (needCollections)
+  {
+    QMap<QString, QString> collectionsEntry;
+    // Collections button
+    collectionsEntry["name"] = "Collections";
+    collectionsEntry["id"] = "";
+    collectionsEntry["type"] = "Collections";
+    prependedRootPathItems.append(collectionsEntry);
+  }
+
+  m_currentRootPath = prependedRootPathItems + m_currentRootPath;
+}
+
 void GirderFileBrowserFetcher::getRootPath()
 {
   m_currentRootPath.clear();
 
   // Parent type must be folder, or this cannot be called.
-  if (currentParentType() != "folder")
+  if (currentParentType() != "folder") {
+    prependNeededRootPathItems();
     return;
+  }
 
   std::unique_ptr<GetFolderRootPathRequest> getRootPathRequest(
     new GetFolderRootPathRequest(m_networkManager, m_apiUrl, m_girderToken, currentParentId()));
@@ -319,6 +373,7 @@ void GirderFileBrowserFetcher::getRootPath()
     this,
     [this](const QList<QMap<QString, QString> >& rootPath) {
       this->m_currentRootPath = rootPath;
+      this->prependNeededRootPathItems();
       this->m_folderRequestPending["rootPath"] = false;
       this->finishGettingFolderInformationIfReady();
     });

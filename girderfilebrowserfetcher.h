@@ -82,6 +82,9 @@ private:
   void getUsersFolderInformation();
   void getCollectionsFolderInformation();
 
+  // A function to prepend /root, /root/Users, or /root/Collections to the root path
+  void prependNeededRootPathItems();
+
   // A general update function called by getUsersFolderInformation() and
   // getCollectionsFolderInformation()
   void finishGettingSecondLevelFolderInformation(const QString& type,

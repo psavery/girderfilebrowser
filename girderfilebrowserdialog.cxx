@@ -92,63 +92,9 @@ void GirderFileBrowserDialog::updateRootPathWidget()
     item->widget()->deleteLater();
   }
 
-  // This will contain the full list of the path including the root
-  // and Users/Collections
-  QList<QMap<QString, QString> > fullRootPath;
-
-  if (currentParentName() != "root")
+  for (int startInd = 0; startInd < m_currentRootPathInfo.size(); ++startInd)
   {
-    QMap<QString, QString> rootEntry;
-    // The root button
-    rootEntry["name"] = "root";
-    rootEntry["id"] = "";
-    rootEntry["type"] = "root";
-    fullRootPath.append(rootEntry);
-  }
-
-  bool needUsersButton = false;
-  bool needCollectionsButton = false;
-  if (!m_currentRootPathInfo.isEmpty())
-  {
-    const auto& topPathItem = m_currentRootPathInfo.front();
-    QString topItemType = topPathItem.value("type");
-    if (topItemType == "user")
-      needUsersButton = true;
-    else if (topItemType == "collection")
-      needCollectionsButton = true;
-  }
-
-  if (currentParentType() == "user")
-    needUsersButton = true;
-  else if (currentParentType() == "collection")
-    needCollectionsButton = true;
-
-  if (needUsersButton)
-  {
-    QMap<QString, QString> usersEntry;
-    // Users button
-    usersEntry["name"] = "Users";
-    usersEntry["id"] = "";
-    usersEntry["type"] = "Users";
-    fullRootPath.append(usersEntry);
-  }
-  else if (needCollectionsButton)
-  {
-    QMap<QString, QString> collectionsEntry;
-    // Collections button
-    collectionsEntry["name"] = "Collections";
-    collectionsEntry["id"] = "";
-    collectionsEntry["type"] = "Collections";
-    fullRootPath.append(collectionsEntry);
-  }
-
-  // Add the folders
-  for (const auto& rootPathItem : m_currentRootPathInfo)
-    fullRootPath.append(rootPathItem);
-
-  for (int startInd = 0; startInd < fullRootPath.size(); ++startInd)
-  {
-    const auto& rootPathItem = fullRootPath[startInd];
+    const auto& rootPathItem = m_currentRootPathInfo[startInd];
 
     auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
     QString name = rootPathItem.value("name");
