@@ -121,7 +121,7 @@ void GirderFileBrowserDialog::resizeEvent(QResizeEvent* event)
 void GirderFileBrowserDialog::adjustRootPathWidgetSize()
 {
   QHBoxLayout* layout = m_ui->layout_rootPath;
-  int layoutWidth = layout->contentsRect().width();
+  int layoutWidth = layout->geometry().width();
   int layoutWidgetsWidth = 0;
   for (int i = 0; i < layout->count(); ++i)
     layoutWidgetsWidth += layout->itemAt(i)->widget()->width();
@@ -154,46 +154,11 @@ void GirderFileBrowserDialog::goUpDirectory()
     // Do nothing
     return;
   }
-  else if (currentParentType() == "Users")
-  {
-    parentName = "root";
-    parentId = "";
-    parentType = "root";
-  }
-  else if (currentParentType() == "Collections")
-  {
-    parentName = "root";
-    parentId = "";
-    parentType = "root";
-  }
-  else if (currentParentType() == "user")
-  {
-    parentName = "Users";
-    parentId = "";
-    parentType = "Users";
-  }
-  else if (currentParentType() == "collection")
-  {
-    parentName = "Collections";
-    parentId = "";
-    parentType = "Collections";
-  }
-  else if (currentParentType() == "folder" && !m_currentRootPathInfo.isEmpty())
-  {
-    parentName = m_currentRootPathInfo.back().value("name");
-    parentId = m_currentRootPathInfo.back().value("id");
-    parentType = m_currentRootPathInfo.back().value("type");
-  }
-  else
-  {
-    // Do nothing
-    return;
-  }
 
   QMap<QString, QString> newParentInfo;
-  newParentInfo["name"] = parentName;
-  newParentInfo["id"] = parentId;
-  newParentInfo["type"] = parentType;
+  newParentInfo["name"] = m_currentRootPathInfo.back().value("name");
+  newParentInfo["id"] = m_currentRootPathInfo.back().value("id");
+  newParentInfo["type"] = m_currentRootPathInfo.back().value("type");
 
   emit changeFolder(newParentInfo);
 }
