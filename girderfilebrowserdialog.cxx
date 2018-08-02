@@ -92,9 +92,11 @@ void GirderFileBrowserDialog::updateRootPathWidget()
     item->widget()->deleteLater();
   }
 
-  for (int startInd = 0; startInd < m_currentRootPathInfo.size(); ++startInd)
+  int startInd = (m_currentRootPathInfo.size() > 2 ? m_currentRootPathInfo.size() - 2 : 0);
+
+  for (int i = startInd; i < m_currentRootPathInfo.size(); ++i)
   {
-    const auto& rootPathItem = m_currentRootPathInfo[startInd];
+    const auto& rootPathItem = m_currentRootPathInfo[i];
 
     auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
     QString name = rootPathItem.value("name");
