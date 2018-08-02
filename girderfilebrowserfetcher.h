@@ -74,8 +74,8 @@ private:
   void getRootPath();
 
   // Checks to see if all steps are complete and there are no errors
-  void finishGettingFolderInformation();
   void finishGettingFolderInformationIfReady();
+  void finishGettingFolderInformation();
 
   // The special cases in the top two level directories
   void getRootFolderInformation();
@@ -114,8 +114,11 @@ private:
   // should all have 3 keys: "name", "id", and "type"
   QList<QMap<QString, QString> > m_currentRootPath;
 
+  // Information about the current parent
+  QMap<QString, QString> m_currentParentInfo;
+
   // Our requests.
-  // These will be deleted when a new request is made.
+  // These will be deleted automatically when a new request is made.
   // We must use a std::map here because QMap has errors with unique_ptr
   // as value.
   std::map<QString, std::unique_ptr<GirderRequest> > m_girderRequests;
@@ -125,11 +128,8 @@ private:
   // Did any update errors occur?
   bool m_folderRequestErrorOccurred;
 
-  // Bool are we currently performing a fetch? If so, we can't perform another one...
+  // Are we currently performing a fetch? If so, we can't perform another one...
   bool m_fetchInProgress;
-
-  // Information about the current parent
-  QMap<QString, QString> m_currentParentInfo;
 };
 
 inline void GirderFileBrowserFetcher::setApiUrlAndGirderToken(const QString& url,

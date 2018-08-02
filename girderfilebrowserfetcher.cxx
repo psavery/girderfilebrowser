@@ -25,6 +25,19 @@ static const QString& GET_USERS_REQUEST = "getUsersRequest";
 static const QString& GET_COLLECTIONS_REQUEST = "getCollectionsRequest";
 static const QString& GET_MY_USER_REQUEST = "getMyUserRequest";
 
+// The folder info for the special cases
+static const QMap<QString, QString> ROOT_FOLDER_INFO = { { "name", "root" },
+  { "id", "" },
+  { "type", "root" } };
+
+static const QMap<QString, QString> USERS_FOLDER_INFO = { { "name", "Users" },
+  { "id", "" },
+  { "type", "Users" } };
+
+static const QMap<QString, QString> COLLECTIONS_FOLDER_INFO = { { "name", "Collections" },
+  { "id", "" },
+  { "type", "Collections" } };
+
 GirderFileBrowserFetcher::GirderFileBrowserFetcher(QNetworkAccessManager* networkManager,
   QObject* parent)
   : QObject(parent)
@@ -112,12 +125,12 @@ void GirderFileBrowserFetcher::getHomeFolderInformation()
     &GetMyUserRequest::myUser,
     this,
     [this](const QMap<QString, QString>& myUserInfo) {
-      this->m_currentParentInfo["name"] = myUserInfo.value("login");
-      this->m_currentParentInfo["id"] = myUserInfo.value("id");
-      this->m_currentParentInfo["type"] = "user";
-      this->getContainingFolders();
-      this->getContainingItems();
-      this->getRootPath();
+      QMap<QString, QString> myUserMap;
+      myUserMap["name"] = myUserInfo.value("login");
+      myUserMap["id"] = myUserInfo.value("id");
+      myUserMap["type"] = "user";
+      this->m_fetchInProgress = false;
+      this->getFolderInformation(myUserMap);
     });
 
   m_girderRequests[GET_MY_USER_REQUEST] = std::move(getMyUserRequest);
@@ -131,17 +144,9 @@ bool GirderFileBrowserFetcher::folderRequestPending() const
 
 void GirderFileBrowserFetcher::getRootFolderInformation()
 {
-  // These are the names of the two folders in the root directory
-  QStringList names = { "Collections", "Users" };
   QList<QMap<QString, QString> > folders;
-  for (const auto& name : names)
-  {
-    QMap<QString, QString> folderInfo;
-    folderInfo["type"] = name;
-    folderInfo["id"] = "";
-    folderInfo["name"] = name;
-    folders.append(folderInfo);
-  }
+  folders.append(COLLECTIONS_FOLDER_INFO);
+  folders.append(USERS_FOLDER_INFO);
 
   // We have no files for the first folder level
   QList<QMap<QString, QString> > files;
@@ -206,12 +211,7 @@ void GirderFileBrowserFetcher::finishGettingSecondLevelFolderInformation(const Q
   // We have no files for the second directory level
   QList<QMap<QString, QString> > files;
 
-  QMap<QString, QString> rootInfo;
-  rootInfo["name"] = "root";
-  rootInfo["id"] = "";
-  rootInfo["type"] = "root";
-
-  QList<QMap<QString, QString> > rootPath{ rootInfo };
+  QList<QMap<QString, QString> > rootPath{ ROOT_FOLDER_INFO };
 
   emit folderInformation(m_currentParentInfo, folders, files, rootPath);
 }
@@ -306,12 +306,7 @@ void GirderFileBrowserFetcher::prependNeededRootPathItems()
 
   if (currentParentName() != "root")
   {
-    QMap<QString, QString> rootEntry;
-    // The root button
-    rootEntry["name"] = "root";
-    rootEntry["id"] = "";
-    rootEntry["type"] = "root";
-    prependedRootPathItems.append(rootEntry);
+    prependedRootPathItems.append(ROOT_FOLDER_INFO);
   }
 
   bool needUsers = false;
@@ -334,23 +329,9 @@ void GirderFileBrowserFetcher::prependNeededRootPathItems()
     needCollections = true;
 
   if (needUsers)
-  {
-    QMap<QString, QString> usersEntry;
-    // Users button
-    usersEntry["name"] = "Users";
-    usersEntry["id"] = "";
-    usersEntry["type"] = "Users";
-    prependedRootPathItems.append(usersEntry);
-  }
+    prependedRootPathItems.append(USERS_FOLDER_INFO);
   else if (needCollections)
-  {
-    QMap<QString, QString> collectionsEntry;
-    // Collections button
-    collectionsEntry["name"] = "Collections";
-    collectionsEntry["id"] = "";
-    collectionsEntry["type"] = "Collections";
-    prependedRootPathItems.append(collectionsEntry);
-  }
+    prependedRootPathItems.append(COLLECTIONS_FOLDER_INFO);
 
   m_currentRootPath = prependedRootPathItems + m_currentRootPath;
 }
@@ -360,7 +341,8 @@ void GirderFileBrowserFetcher::getRootPath()
   m_currentRootPath.clear();
 
   // Parent type must be folder, or this cannot be called.
-  if (currentParentType() != "folder") {
+  if (currentParentType() != "folder")
+  {
     prependNeededRootPathItems();
     return;
   }
