@@ -76,7 +76,6 @@ private slots:
 
 private:
   void updateRootPathWidget();
-  void adjustRootPathWidgetSize();
 
   // Convenience functions...
   QString currentParentName() const { return m_currentParentInfo.value("name"); }

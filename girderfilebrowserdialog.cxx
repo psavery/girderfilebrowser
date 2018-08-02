@@ -81,22 +81,38 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
 GirderFileBrowserDialog::~GirderFileBrowserDialog() = default;
 
+// A convenience function for estimating button width
+static int buttonWidth(QPushButton* button)
+{
+  return std::max(button->fontMetrics().width(button->text()), button->sizeHint().width());
+}
+
 void GirderFileBrowserDialog::updateRootPathWidget()
 {
-  // Clear the current items from the QLayout
   QHBoxLayout* layout = m_ui->layout_rootPath;
   QWidget* parentWidget = layout->parentWidget();
+
+  // Cache the old layout width and make sure we don't exceed it.
+  int oldLayoutWidth = layout->geometry().width();
+
+  // Clear the current items from the QLayout
   while (QLayoutItem* item = layout->takeAt(0))
   {
     layout->removeWidget(item->widget());
     item->widget()->deleteLater();
   }
 
-  int startInd = (m_currentRootPathInfo.size() > 2 ? m_currentRootPathInfo.size() - 2 : 0);
+  // Add the widgets in backwards
+  // This button doesn't do anything... it is only here for consistency
+  QPushButton* firstButton = new QPushButton(currentParentName() + "/", parentWidget);
+  layout->addWidget(firstButton);
 
-  for (int i = startInd; i < m_currentRootPathInfo.size(); ++i)
+  // Sum up the total button width and make sure we don't exceed it
+  int totalWidgetWidth = buttonWidth(firstButton);
+
+  for (auto it = m_currentRootPathInfo.rbegin(); it != m_currentRootPathInfo.rend(); ++it)
   {
-    const auto& rootPathItem = m_currentRootPathInfo[i];
+    const auto& rootPathItem = *it;
 
     auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
     QString name = rootPathItem.value("name");
@@ -104,34 +120,22 @@ void GirderFileBrowserDialog::updateRootPathWidget()
     QPushButton* button = new QPushButton(name + "/", parentWidget);
     connect(button, &QPushButton::pressed, this, callFunc);
 
-    layout->addWidget(button);
+    int newButtonWidth = buttonWidth(button);
+
+    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth) {
+      delete button;
+      break;
+    }
+
+    layout->insertWidget(0, button);
+    totalWidgetWidth += newButtonWidth;
   }
-
-  // This button doesn't do anything... it is only here for consistency
-  layout->addWidget(new QPushButton(currentParentName() + "/", parentWidget));
-
-  // Adjust the layout size at the top by hiding earlier path items
-  adjustRootPathWidgetSize();
 }
 
 void GirderFileBrowserDialog::resizeEvent(QResizeEvent* event)
 {
-  adjustRootPathWidgetSize();
+  updateRootPathWidget();
   QWidget::resizeEvent(event);
-}
-
-void GirderFileBrowserDialog::adjustRootPathWidgetSize()
-{
-  QHBoxLayout* layout = m_ui->layout_rootPath;
-  int layoutWidth = layout->geometry().width();
-  int layoutWidgetsWidth = 0;
-  for (int i = 0; i < layout->count(); ++i)
-    layoutWidgetsWidth += layout->itemAt(i)->widget()->width();
-
-  double ratio = static_cast<double>(layoutWidgetsWidth) / layoutWidth;
-  //qDebug() << "layoutWidth is " << layoutWidth;
-  //qDebug() << "layoutWidgetsWidth is" << layoutWidgetsWidth;
-  //qDebug() << "ratio is" << ratio;
 }
 
 void GirderFileBrowserDialog::itemDoubleClicked(const QModelIndex& index)
