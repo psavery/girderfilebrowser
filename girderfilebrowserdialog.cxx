@@ -11,31 +11,23 @@
 #include "girderfilebrowserdialog.h"
 #include "ui_girderfilebrowserdialog.h"
 
-#include "girderrequest.h"
+#include "girderfilebrowserfetcher.h"
 
 #include <QLabel>
 #include <QNetworkAccessManager>
 #include <QPushButton>
 #include <QStandardItemModel>
-#include <QTimer>
 
 namespace cumulus
 {
 
-// Set the various names we will use for the requests
-static const QString& UPDATE_FOLDERS_REQUEST = "updateFoldersRequest";
-static const QString& UPDATE_ITEMS_REQUEST = "updateItemsRequest";
-static const QString& UPDATE_ROOT_PATH_REQUEST = "updateRootPathRequest";
-static const QString& GET_USERS_REQUEST = "getUsersRequest";
-static const QString& GET_COLLECTIONS_REQUEST = "getCollectionsRequest";
-static const QString& GET_MY_USER_REQUEST = "getMyUserRequest";
-
 GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkManager,
   QWidget* parent)
   : QDialog(parent)
+  , m_networkManager(networkManager)
   , m_ui(new Ui::GirderFileBrowserDialog)
   , m_itemModel(new QStandardItemModel(this))
-  , m_networkManager(networkManager)
+  , m_girderFileBrowserFetcher(new GirderFileBrowserFetcher(m_networkManager))
   , m_folderIcon(new QIcon(":/icons/folder.png"))
   , m_fileIcon(new QIcon(":/icons/file.png"))
 {
@@ -61,227 +53,33 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
   connect(m_ui->push_goHome, &QPushButton::pressed, this, &GirderFileBrowserDialog::goHome);
 
-  // These indicate if a browser list update request is currently pending
-  m_browserListUpdatesPending["folders"] = false;
-  m_browserListUpdatesPending["items"] = false;
-  m_browserListUpdatesPending["rootPath"] = false;
+  connect(this,
+    &GirderFileBrowserDialog::changeFolder,
+    m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::getFolderInformation);
+  connect(this,
+    &GirderFileBrowserDialog::goHome,
+    m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::getHomeFolderInformation);
+  connect(m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::folderInformation,
+    this,
+    &GirderFileBrowserDialog::finishChangingFolder);
+  connect(m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::error,
+    this,
+    &GirderFileBrowserDialog::errorReceived);
 
   // We will start in root
-  QString currentParentName = "root";
-  QString currentParentId = "";
-  QString currentParentType = "root";
+  QMap<QString, QString> parentInfo;
+  parentInfo["name"] = "root";
+  parentInfo["id"] = "";
+  parentInfo["type"] = "root";
 
-  updateBrowser(currentParentName, currentParentId, currentParentType);
+  emit changeFolder(parentInfo);
 }
 
 GirderFileBrowserDialog::~GirderFileBrowserDialog() = default;
-
-void GirderFileBrowserDialog::updateBrowser(const QString& parentName,
-  const QString& parentId,
-  const QString& parentType)
-{
-  // If there are browser list updates pending, we will not call this now
-  if (browserListUpdatesPending())
-    return;
-
-  m_currentParentInfo["name"] = parentName;
-  m_currentParentInfo["id"] = parentId;
-  m_currentParentInfo["type"] = parentType;
-  updateBrowserList();
-}
-
-void GirderFileBrowserDialog::updateBrowserList()
-{
-  m_browserListUpdateErrorOccurred = false;
-
-  // The first two directory levels will be different from the rest.
-  if (currentParentType() == "root")
-  {
-    updateBrowserListForRoot();
-    return;
-  }
-  else if (currentParentType() == "Users")
-  {
-    updateBrowserListForUsers();
-    return;
-  }
-  else if (currentParentType() == "Collections")
-  {
-    updateBrowserListForCollections();
-    return;
-  }
-
-  // For the standard case
-  updateCurrentFolders();
-  updateCurrentItems();
-  updateRootPath();
-}
-
-bool GirderFileBrowserDialog::browserListUpdatesPending() const
-{
-  const QList<bool>& list = m_browserListUpdatesPending.values();
-  return std::any_of(list.cbegin(), list.cend(), [](bool b) { return b; });
-}
-
-void GirderFileBrowserDialog::updateBrowserListForRoot()
-{
-  size_t numRows = 2;
-  m_itemModel->setRowCount(numRows);
-  m_itemModel->setColumnCount(1);
-
-  m_cachedRowInfo.clear();
-  m_itemModel->clear();
-
-  for (size_t currentRow = 0; currentRow < numRows; ++currentRow)
-  {
-    QString name;
-    if (currentRow == 0)
-      name = "Collections";
-    else if (currentRow == 1)
-      name = "Users";
-
-    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
-    QMap<QString, QString> rowInfo;
-    rowInfo["type"] = name;
-    rowInfo["id"] = "";
-    rowInfo["name"] = name;
-    m_cachedRowInfo.append(rowInfo);
-  }
-
-  m_currentRootPath.clear();
-  updateRootPathWidget();
-}
-
-// A convenience function to do three things:
-//   1. Call "send()" on the GirderRequest sender.
-//   2. Create connections for finish condition.
-//   3. Create connections for error condition.
-// Sender must be a GirderRequest object, and Receiver must be
-// a GirderFileBrowserDialog object. Slot can be either a
-// GirderFileBrowserDialog function or a lambda.
-template<typename Sender, typename Signal, typename Receiver, typename Slot>
-static void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Slot slot)
-{
-  sender->send();
-
-  QObject::connect(sender, signal, receiver, slot);
-  QObject::connect(
-    sender, &GirderRequest::error, receiver, &GirderFileBrowserDialog::errorReceived);
-}
-
-void GirderFileBrowserDialog::updateBrowserListForUsers()
-{
-  std::unique_ptr<GetUsersRequest> getUsersRequest(
-    new GetUsersRequest(m_networkManager, m_girderUrl, m_girderToken));
-
-  sendAndConnect(getUsersRequest.get(),
-    &GetUsersRequest::users,
-    this,
-    [this](const QMap<QString, QString>& usersMap) {
-      this->updateSecondDirectoryLevel("user", usersMap);
-    });
-
-  m_updateRequests[GET_USERS_REQUEST] = std::move(getUsersRequest);
-}
-
-void GirderFileBrowserDialog::updateBrowserListForCollections()
-{
-  std::unique_ptr<GetCollectionsRequest> getCollectionsRequest(
-    new GetCollectionsRequest(m_networkManager, m_girderUrl, m_girderToken));
-
-  sendAndConnect(getCollectionsRequest.get(),
-    &GetCollectionsRequest::collections,
-    this,
-    [this](const QMap<QString, QString>& collectionsMap) {
-      this->updateSecondDirectoryLevel("collection", collectionsMap);
-    });
-
-  m_updateRequests[GET_COLLECTIONS_REQUEST] = std::move(getCollectionsRequest);
-}
-
-// Type is probably either "user" or "collection"
-void GirderFileBrowserDialog::updateSecondDirectoryLevel(const QString& type,
-  const QMap<QString, QString>& map)
-{
-  int numRows = map.keys().size();
-  m_itemModel->setRowCount(numRows);
-  m_itemModel->setColumnCount(1);
-
-  m_cachedRowInfo.clear();
-  m_itemModel->clear();
-
-  int currentRow = 0;
-
-  // Let's sort these by name. QMap sorts by key.
-  QMap<QString, QString> sortedByName;
-  for (const auto& id : map.keys())
-    sortedByName[map.value(id)] = id;
-
-  for (const auto& name : sortedByName.keys())
-  {
-    QString id = sortedByName[name];
-    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
-
-    QMap<QString, QString> rowInfo;
-    rowInfo["type"] = type;
-    rowInfo["id"] = id;
-    rowInfo["name"] = name;
-    m_cachedRowInfo.append(rowInfo);
-    ++currentRow;
-  }
-
-  m_currentRootPath.clear();
-  updateRootPathWidget();
-}
-
-void GirderFileBrowserDialog::finishUpdatingBrowserList()
-{
-  int numRows = m_currentFolders.keys().size() + m_currentItems.keys().size();
-  m_itemModel->setRowCount(numRows);
-  m_itemModel->setColumnCount(1);
-
-  m_cachedRowInfo.clear();
-  m_itemModel->clear();
-
-  int currentRow = 0;
-
-  // Let's sort these by name. QMap sorts by key.
-  QMap<QString, QString> sortedByName;
-  for (const auto& id : m_currentFolders.keys())
-    sortedByName[m_currentFolders.value(id)] = id;
-
-  for (const auto& name : sortedByName.keys())
-  {
-    QString id = sortedByName.value(name);
-    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
-
-    QMap<QString, QString> rowInfo;
-    rowInfo["type"] = "folder";
-    rowInfo["id"] = id;
-    rowInfo["name"] = name;
-    m_cachedRowInfo.append(rowInfo);
-    ++currentRow;
-  }
-
-  sortedByName.clear();
-  // Let's sort these by name. QMap sorts by key.
-  for (const auto& id : m_currentItems.keys())
-    sortedByName[m_currentItems.value(id)] = id;
-
-  for (const auto& name : sortedByName.keys())
-  {
-    QString id = sortedByName.value(name);
-    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_fileIcon, name));
-    QMap<QString, QString> rowInfo;
-    rowInfo["type"] = "item";
-    rowInfo["id"] = id;
-    rowInfo["name"] = name;
-    m_cachedRowInfo.append(rowInfo);
-    ++currentRow;
-  }
-
-  updateRootPathWidget();
-}
 
 void GirderFileBrowserDialog::updateRootPathWidget()
 {
@@ -310,9 +108,9 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
   bool needUsersButton = false;
   bool needCollectionsButton = false;
-  if (!m_currentRootPath.isEmpty())
+  if (!m_currentRootPathInfo.isEmpty())
   {
-    const auto& topPathItem = m_currentRootPath.front();
+    const auto& topPathItem = m_currentRootPathInfo.front();
     QString topItemType = topPathItem.value("type");
     if (topItemType == "user")
       needUsersButton = true;
@@ -345,31 +143,47 @@ void GirderFileBrowserDialog::updateRootPathWidget()
   }
 
   // Add the folders
-  for (const auto& rootPathItem : m_currentRootPath)
+  for (const auto& rootPathItem : m_currentRootPathInfo)
     fullRootPath.append(rootPathItem);
 
-  layout->addWidget(new QLabel("/", parentWidget));
-  // Only put the most recent three buttons at the top
-  int startInd = (fullRootPath.size() > 1 ? fullRootPath.size() - 2 : 0);
-  for (startInd; startInd < fullRootPath.size(); ++startInd)
+  for (int startInd = 0; startInd < fullRootPath.size(); ++startInd)
   {
     const auto& rootPathItem = fullRootPath[startInd];
+
+    auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
     QString name = rootPathItem.value("name");
-    QString id = rootPathItem.value("id");
-    QString type = rootPathItem.value("type");
 
-    auto callFunc = [this, name, id, type]() { this->updateBrowser(name, id, type); };
-
-    QPushButton* button = new QPushButton(name, parentWidget);
+    QPushButton* button = new QPushButton(name + "/", parentWidget);
     connect(button, &QPushButton::pressed, this, callFunc);
 
     layout->addWidget(button);
-    layout->addWidget(new QLabel("/", parentWidget));
   }
 
   // This button doesn't do anything... it is only here for consistency
-  layout->addWidget(new QPushButton(currentParentName(), parentWidget));
-  layout->addWidget(new QLabel("/", parentWidget));
+  layout->addWidget(new QPushButton(currentParentName() + "/", parentWidget));
+
+  // Adjust the layout size at the top by hiding earlier path items
+  adjustRootPathWidgetSize();
+}
+
+void GirderFileBrowserDialog::resizeEvent(QResizeEvent* event)
+{
+  adjustRootPathWidgetSize();
+  QWidget::resizeEvent(event);
+}
+
+void GirderFileBrowserDialog::adjustRootPathWidgetSize()
+{
+  QHBoxLayout* layout = m_ui->layout_rootPath;
+  int layoutWidth = layout->contentsRect().width();
+  int layoutWidgetsWidth = 0;
+  for (int i = 0; i < layout->count(); ++i)
+    layoutWidgetsWidth += layout->itemAt(i)->widget()->width();
+
+  double ratio = static_cast<double>(layoutWidgetsWidth) / layoutWidth;
+  //qDebug() << "layoutWidth is " << layoutWidth;
+  //qDebug() << "layoutWidgetsWidth is" << layoutWidgetsWidth;
+  //qDebug() << "ratio is" << ratio;
 }
 
 void GirderFileBrowserDialog::itemDoubleClicked(const QModelIndex& index)
@@ -382,11 +196,7 @@ void GirderFileBrowserDialog::itemDoubleClicked(const QModelIndex& index)
     QStringList folderTypes{ "root", "Users", "Collections", "user", "collection", "folder" };
 
     if (folderTypes.contains(parentType))
-    {
-      QString parentId = m_cachedRowInfo[row].value("id", "");
-      QString parentName = m_cachedRowInfo[row].value("name", "");
-      updateBrowser(parentName, parentId, parentType);
-    }
+      emit changeFolder(m_cachedRowInfo[row]);
   }
 }
 
@@ -422,11 +232,11 @@ void GirderFileBrowserDialog::goUpDirectory()
     parentId = "";
     parentType = "Collections";
   }
-  else if (currentParentType() == "folder" && !m_currentRootPath.isEmpty())
+  else if (currentParentType() == "folder" && !m_currentRootPathInfo.isEmpty())
   {
-    parentName = m_currentRootPath.back().value("name");
-    parentId = m_currentRootPath.back().value("id");
-    parentType = m_currentRootPath.back().value("type");
+    parentName = m_currentRootPathInfo.back().value("name");
+    parentId = m_currentRootPathInfo.back().value("id");
+    parentType = m_currentRootPathInfo.back().value("type");
   }
   else
   {
@@ -434,129 +244,72 @@ void GirderFileBrowserDialog::goUpDirectory()
     return;
   }
 
-  updateBrowser(parentName, parentId, parentType);
+  QMap<QString, QString> newParentInfo;
+  newParentInfo["name"] = parentName;
+  newParentInfo["id"] = parentId;
+  newParentInfo["type"] = parentType;
+
+  emit changeFolder(newParentInfo);
 }
 
-void GirderFileBrowserDialog::goHome()
+void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>& newParentInfo,
+  const QList<QMap<QString, QString> >& folders,
+  const QList<QMap<QString, QString> >& files,
+  const QList<QMap<QString, QString> >& rootPath)
 {
-  std::unique_ptr<GetMyUserRequest> getMyUserRequest(
-    new GetMyUserRequest(m_networkManager, m_girderUrl, m_girderToken));
+  m_currentParentInfo = newParentInfo;
+  m_currentRootPathInfo = rootPath;
 
-  sendAndConnect(getMyUserRequest.get(),
-    &GetMyUserRequest::myUser,
-    this,
-    [this](const QMap<QString, QString>& myUserInfo) {
-      QString name = myUserInfo.value("login");
-      QString id = myUserInfo.value("id");
-      QString type = "user";
-      this->updateBrowser(name, id, type);
-    });
+  size_t numRows = folders.size() + files.size();
+  m_itemModel->setRowCount(numRows);
+  m_itemModel->setColumnCount(1);
 
-  m_updateRequests[GET_MY_USER_REQUEST] = std::move(getMyUserRequest);
-}
+  m_cachedRowInfo.clear();
 
-void GirderFileBrowserDialog::updateCurrentFolders()
-{
-  m_currentFolders.clear();
+  int currentRow = 0;
 
-  std::unique_ptr<ListFoldersRequest> updateFoldersRequest(new ListFoldersRequest(
-    m_networkManager, m_girderUrl, m_girderToken, currentParentId(), currentParentType()));
+  // Folders
+  for (int i = 0; i < folders.size(); ++i)
+  {
+    QString name = folders[i].value("name");
 
-  sendAndConnect(updateFoldersRequest.get(),
-    &ListFoldersRequest::folders,
-    this,
-    [this](const QMap<QString, QString>& newFolders) {
-      this->m_currentFolders = newFolders;
-      this->m_browserListUpdatesPending["folders"] = false;
-      this->updateBrowserListIfReady();
-    });
+    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_folderIcon, name));
+    m_cachedRowInfo.append(folders[i]);
+    ++currentRow;
+  }
 
-  m_updateRequests[UPDATE_FOLDERS_REQUEST] = std::move(updateFoldersRequest);
-  m_browserListUpdatesPending["folders"] = true;
-}
+  // Files
+  for (int i = 0; i < files.size(); ++i)
+  {
+    QString name = files[i].value("name");
 
-void GirderFileBrowserDialog::updateCurrentItems()
-{
-  m_currentItems.clear();
+    m_itemModel->setItem(currentRow, 0, new QStandardItem(*m_fileIcon, name));
+    m_cachedRowInfo.append(files[i]);
+    ++currentRow;
+  }
 
-  // Parent type must be folder, or there are no items
-  if (currentParentType() != "folder")
-    return;
-
-  std::unique_ptr<ListItemsRequest> updateItemsRequest(
-    new ListItemsRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
-
-  sendAndConnect(updateItemsRequest.get(),
-    &ListItemsRequest::items,
-    this,
-    [this](const QMap<QString, QString>& newItems) {
-      this->m_currentItems = newItems;
-      this->m_browserListUpdatesPending["items"] = false;
-      this->updateBrowserListIfReady();
-    });
-
-  m_updateRequests[UPDATE_ITEMS_REQUEST] = std::move(updateItemsRequest);
-  m_browserListUpdatesPending["items"] = true;
-}
-
-void GirderFileBrowserDialog::updateRootPath()
-{
-  m_currentRootPath.clear();
-
-  // Parent type must be folder, or this cannot be called.
-  if (currentParentType() != "folder")
-    return;
-
-  std::unique_ptr<GetFolderRootPathRequest> updateRootPathRequest(
-    new GetFolderRootPathRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
-
-  sendAndConnect(updateRootPathRequest.get(),
-    &GetFolderRootPathRequest::rootPath,
-    this,
-    [this](const QList<QMap<QString, QString> >& newRootPath) {
-      this->m_currentRootPath = newRootPath;
-      this->m_browserListUpdatesPending["rootPath"] = false;
-      this->updateBrowserListIfReady();
-    });
-
-  m_updateRequests[UPDATE_ROOT_PATH_REQUEST] = std::move(updateRootPathRequest);
-  m_browserListUpdatesPending["rootPath"] = true;
+  updateRootPathWidget();
 }
 
 void GirderFileBrowserDialog::errorReceived(const QString& message)
 {
-  QObject* sender = QObject::sender();
-  if (sender == m_updateRequests[UPDATE_FOLDERS_REQUEST].get())
-  {
-    m_browserListUpdateErrorOccurred = true;
-    qDebug() << "An error occurred while updating folders:";
-    m_browserListUpdatesPending["folders"] = false;
-  }
-  else if (sender == m_updateRequests[UPDATE_ITEMS_REQUEST].get())
-  {
-    m_browserListUpdateErrorOccurred = true;
-    qDebug() << "An error occurred while updating items:";
-    m_browserListUpdatesPending["items"] = false;
-  }
-  else if (sender == m_updateRequests[UPDATE_ROOT_PATH_REQUEST].get())
-  {
-    m_browserListUpdateErrorOccurred = true;
-    qDebug() << "An error occurred while updating the root path:";
-    m_browserListUpdatesPending["rootPath"] = false;
-  }
-  else if (sender == m_updateRequests[GET_USERS_REQUEST].get())
-  {
-    qDebug() << "An error occurred while getting users:";
-  }
-  else if (sender == m_updateRequests[GET_COLLECTIONS_REQUEST].get())
-  {
-    qDebug() << "An error occurred while getting collections:";
-  }
-  else if (sender == m_updateRequests[GET_MY_USER_REQUEST].get())
-  {
-    qDebug() << "Failed to get information about current user:";
-  }
-  qDebug() << message;
+  qDebug() << "Error changing folders:\n" << message;
+}
+
+void GirderFileBrowserDialog::setApiUrl(const QString& url)
+{
+  m_girderFileBrowserFetcher->setApiUrl(url);
+}
+
+void GirderFileBrowserDialog::setGirderToken(const QString& token)
+{
+  m_girderFileBrowserFetcher->setGirderToken(token);
+}
+
+void GirderFileBrowserDialog::setApiUrlAndGirderToken(const QString& url, const QString& token)
+{
+  setApiUrl(url);
+  setGirderToken(token);
 }
 
 } // end namespace
