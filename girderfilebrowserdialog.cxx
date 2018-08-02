@@ -22,6 +22,14 @@
 namespace cumulus
 {
 
+// Set the various names we will use for the requests
+static const QString& UPDATE_FOLDERS_REQUEST = "updateFoldersRequest";
+static const QString& UPDATE_ITEMS_REQUEST = "updateItemsRequest";
+static const QString& UPDATE_ROOT_PATH_REQUEST = "updateRootPathRequest";
+static const QString& GET_USERS_REQUEST = "getUsersRequest";
+static const QString& GET_COLLECTIONS_REQUEST = "getCollectionsRequest";
+static const QString& GET_MY_USER_REQUEST = "getMyUserRequest";
+
 GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkManager,
   QWidget* parent)
   : QDialog(parent)
@@ -163,27 +171,32 @@ static void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Sl
 
 void GirderFileBrowserDialog::updateBrowserListForUsers()
 {
-  m_getUsersRequest.reset(new GetUsersRequest(m_networkManager, m_girderUrl, m_girderToken));
+  std::unique_ptr<GetUsersRequest> getUsersRequest(
+    new GetUsersRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  sendAndConnect(m_getUsersRequest.get(),
+  sendAndConnect(getUsersRequest.get(),
     &GetUsersRequest::users,
     this,
     [this](const QMap<QString, QString>& usersMap) {
       this->updateSecondDirectoryLevel("user", usersMap);
     });
+
+  m_updateRequests[GET_USERS_REQUEST] = std::move(getUsersRequest);
 }
 
 void GirderFileBrowserDialog::updateBrowserListForCollections()
 {
-  m_getCollectionsRequest.reset(
+  std::unique_ptr<GetCollectionsRequest> getCollectionsRequest(
     new GetCollectionsRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  sendAndConnect(m_getCollectionsRequest.get(),
+  sendAndConnect(getCollectionsRequest.get(),
     &GetCollectionsRequest::collections,
     this,
     [this](const QMap<QString, QString>& collectionsMap) {
       this->updateSecondDirectoryLevel("collection", collectionsMap);
     });
+
+  m_updateRequests[GET_COLLECTIONS_REQUEST] = std::move(getCollectionsRequest);
 }
 
 // Type is probably either "user" or "collection"
@@ -426,9 +439,10 @@ void GirderFileBrowserDialog::goUpDirectory()
 
 void GirderFileBrowserDialog::goHome()
 {
-  m_getMyUserRequest.reset(new GetMyUserRequest(m_networkManager, m_girderUrl, m_girderToken));
+  std::unique_ptr<GetMyUserRequest> getMyUserRequest(
+    new GetMyUserRequest(m_networkManager, m_girderUrl, m_girderToken));
 
-  sendAndConnect(m_getMyUserRequest.get(),
+  sendAndConnect(getMyUserRequest.get(),
     &GetMyUserRequest::myUser,
     this,
     [this](const QMap<QString, QString>& myUserInfo) {
@@ -437,16 +451,18 @@ void GirderFileBrowserDialog::goHome()
       QString type = "user";
       this->updateBrowser(name, id, type);
     });
+
+  m_updateRequests[GET_MY_USER_REQUEST] = std::move(getMyUserRequest);
 }
 
 void GirderFileBrowserDialog::updateCurrentFolders()
 {
   m_currentFolders.clear();
 
-  m_updateFoldersRequest.reset(new ListFoldersRequest(
+  std::unique_ptr<ListFoldersRequest> updateFoldersRequest(new ListFoldersRequest(
     m_networkManager, m_girderUrl, m_girderToken, currentParentId(), currentParentType()));
 
-  sendAndConnect(m_updateFoldersRequest.get(),
+  sendAndConnect(updateFoldersRequest.get(),
     &ListFoldersRequest::folders,
     this,
     [this](const QMap<QString, QString>& newFolders) {
@@ -455,6 +471,7 @@ void GirderFileBrowserDialog::updateCurrentFolders()
       this->updateBrowserListIfReady();
     });
 
+  m_updateRequests[UPDATE_FOLDERS_REQUEST] = std::move(updateFoldersRequest);
   m_browserListUpdatesPending["folders"] = true;
 }
 
@@ -466,10 +483,10 @@ void GirderFileBrowserDialog::updateCurrentItems()
   if (currentParentType() != "folder")
     return;
 
-  m_updateItemsRequest.reset(
+  std::unique_ptr<ListItemsRequest> updateItemsRequest(
     new ListItemsRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
 
-  sendAndConnect(m_updateItemsRequest.get(),
+  sendAndConnect(updateItemsRequest.get(),
     &ListItemsRequest::items,
     this,
     [this](const QMap<QString, QString>& newItems) {
@@ -478,6 +495,7 @@ void GirderFileBrowserDialog::updateCurrentItems()
       this->updateBrowserListIfReady();
     });
 
+  m_updateRequests[UPDATE_ITEMS_REQUEST] = std::move(updateItemsRequest);
   m_browserListUpdatesPending["items"] = true;
 }
 
@@ -489,51 +507,52 @@ void GirderFileBrowserDialog::updateRootPath()
   if (currentParentType() != "folder")
     return;
 
-  m_updateRootPathRequest.reset(
+  std::unique_ptr<GetFolderRootPathRequest> updateRootPathRequest(
     new GetFolderRootPathRequest(m_networkManager, m_girderUrl, m_girderToken, currentParentId()));
 
-  sendAndConnect(m_updateRootPathRequest.get(),
+  sendAndConnect(updateRootPathRequest.get(),
     &GetFolderRootPathRequest::rootPath,
     this,
-    [this](const QList<QMap<QString, QString>>& newRootPath) {
+    [this](const QList<QMap<QString, QString> >& newRootPath) {
       this->m_currentRootPath = newRootPath;
       this->m_browserListUpdatesPending["rootPath"] = false;
       this->updateBrowserListIfReady();
     });
 
+  m_updateRequests[UPDATE_ROOT_PATH_REQUEST] = std::move(updateRootPathRequest);
   m_browserListUpdatesPending["rootPath"] = true;
 }
 
 void GirderFileBrowserDialog::errorReceived(const QString& message)
 {
   QObject* sender = QObject::sender();
-  if (sender == m_updateFoldersRequest.get())
+  if (sender == m_updateRequests[UPDATE_FOLDERS_REQUEST].get())
   {
     m_browserListUpdateErrorOccurred = true;
     qDebug() << "An error occurred while updating folders:";
     m_browserListUpdatesPending["folders"] = false;
   }
-  else if (sender == m_updateItemsRequest.get())
+  else if (sender == m_updateRequests[UPDATE_ITEMS_REQUEST].get())
   {
     m_browserListUpdateErrorOccurred = true;
     qDebug() << "An error occurred while updating items:";
     m_browserListUpdatesPending["items"] = false;
   }
-  else if (sender == m_updateRootPathRequest.get())
+  else if (sender == m_updateRequests[UPDATE_ROOT_PATH_REQUEST].get())
   {
     m_browserListUpdateErrorOccurred = true;
     qDebug() << "An error occurred while updating the root path:";
     m_browserListUpdatesPending["rootPath"] = false;
   }
-  else if (sender == m_getUsersRequest.get())
+  else if (sender == m_updateRequests[GET_USERS_REQUEST].get())
   {
     qDebug() << "An error occurred while getting users:";
   }
-  else if (sender == m_getCollectionsRequest.get())
+  else if (sender == m_updateRequests[GET_COLLECTIONS_REQUEST].get())
   {
     qDebug() << "An error occurred while getting collections:";
   }
-  else if (sender == m_getMyUserRequest.get())
+  else if (sender == m_updateRequests[GET_MY_USER_REQUEST].get())
   {
     qDebug() << "Failed to get information about current user:";
   }

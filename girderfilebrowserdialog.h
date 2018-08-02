@@ -21,6 +21,7 @@
 #include <QString>
 
 #include <memory>
+#include <map>
 
 class QIcon;
 class QModelIndex;
@@ -35,14 +36,7 @@ class GirderFileBrowserDialog;
 namespace cumulus
 {
 
-// The various kinds of girder requests
 class GirderRequest;
-class ListFoldersRequest;
-class ListItemsRequest;
-class GetFolderRootPathRequest;
-class GetUsersRequest;
-class GetCollectionsRequest;
-class GetMyUserRequest;
 
 class SMTKCUMULUSEXT_EXPORT GirderFileBrowserDialog : public QDialog
 {
@@ -125,12 +119,9 @@ private:
 
   // Our requests.
   // These will be deleted when a new request is made.
-  std::unique_ptr<ListFoldersRequest> m_updateFoldersRequest;
-  std::unique_ptr<ListItemsRequest> m_updateItemsRequest;
-  std::unique_ptr<GetFolderRootPathRequest> m_updateRootPathRequest;
-  std::unique_ptr<GetUsersRequest> m_getUsersRequest;
-  std::unique_ptr<GetCollectionsRequest> m_getCollectionsRequest;
-  std::unique_ptr<GetMyUserRequest> m_getMyUserRequest;
+  // We must use a std::map here because QMap has errors with unique_ptr
+  // as value.
+  std::map<QString, std::unique_ptr<GirderRequest>> m_updateRequests;
 
   // Are there any updates pending?
   QMap<QString, bool> m_browserListUpdatesPending;
