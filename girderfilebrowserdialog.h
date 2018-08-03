@@ -64,7 +64,7 @@ protected:
   void resizeEvent(QResizeEvent* event) override;
 
 private slots:
-  void itemDoubleClicked(const QModelIndex&);
+  void rowActivated(const QModelIndex&);
   void goUpDirectory();
 
   void finishChangingFolder(const QMap<QString, QString>& newParentInfo,

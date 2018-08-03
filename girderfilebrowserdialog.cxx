@@ -37,17 +37,11 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
 
-  // Upon item double-clicked...
-  connect(m_ui->list_fileBrowser,
-    &QAbstractItemView::doubleClicked,
-    this,
-    &GirderFileBrowserDialog::itemDoubleClicked);
-
   // This is if the user presses the "enter" key... Do the same thing as double-click.
   connect(m_ui->list_fileBrowser,
     &QAbstractItemView::activated,
     this,
-    &GirderFileBrowserDialog::itemDoubleClicked);
+    &GirderFileBrowserDialog::rowActivated);
 
   // Connect buttons
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
@@ -138,7 +132,7 @@ void GirderFileBrowserDialog::resizeEvent(QResizeEvent* event)
   QWidget::resizeEvent(event);
 }
 
-void GirderFileBrowserDialog::itemDoubleClicked(const QModelIndex& index)
+void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
 {
   int row = index.row();
   if (row < m_cachedRowInfo.size())
