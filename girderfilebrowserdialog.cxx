@@ -166,11 +166,9 @@ void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
     QStringList folderTypes{ "root", "Users", "Collections", "user", "collection", "folder" };
 
     // If we are to treat items as folders, add items to this list
-    if (m_girderFileBrowserFetcher->itemMode() ==
-      GirderFileBrowserFetcher::ItemMode::treatItemsAsFolders)
-    {
+    using ItemMode = GirderFileBrowserFetcher::ItemMode;
+    if (m_girderFileBrowserFetcher->itemMode() == ItemMode::treatItemsAsFolders)
       folderTypes.append("item");
-    }
 
     if (folderTypes.contains(parentType))
       emit changeFolder(m_cachedRowInfo[row]);
