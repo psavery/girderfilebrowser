@@ -50,6 +50,7 @@ public:
   };
 
   void setItemMode(ItemMode mode) { m_itemMode = mode; }
+  ItemMode itemMode() { return m_itemMode; }
 
 signals:
   // Emitted when getFolderInformation() is complete

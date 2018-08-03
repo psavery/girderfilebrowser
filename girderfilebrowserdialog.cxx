@@ -116,7 +116,8 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
     int newButtonWidth = buttonWidth(button);
 
-    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth * 0.9) {
+    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth * 0.9)
+    {
       delete button;
       break;
     }
@@ -140,6 +141,12 @@ void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
     QString parentType = m_cachedRowInfo[row].value("type", "unknown");
 
     QStringList folderTypes{ "root", "Users", "Collections", "user", "collection", "folder" };
+
+    // If we are to treat items as folders, add items to this list
+    if (m_girderFileBrowserFetcher->itemMode() ==
+      GirderFileBrowserFetcher::ItemMode::treatItemsAsFolders) {
+      folderTypes.append("item");
+    }
 
     if (folderTypes.contains(parentType))
       emit changeFolder(m_cachedRowInfo[row]);

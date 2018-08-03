@@ -416,13 +416,11 @@ void GirderFileBrowserFetcher::getContainingFiles()
     &ListFilesRequest::files,
     this,
     [this](const QMap<QString, QString>& files) {
-      qDebug() << "Files have arrived!";
       this->m_currentFiles = files;
       this->m_folderRequestPending["files"] = false;
       this->finishGettingFolderInformationIfReady();
     });
 
-  qDebug() << "Time to wait for files!";
   m_girderRequests[GET_FILES_REQUEST] = std::move(listFilesRequest);
   m_folderRequestPending["files"] = true;
 }
@@ -468,18 +466,18 @@ void GirderFileBrowserFetcher::getRootPath()
 {
   m_currentRootPath.clear();
 
-  // Parent type must be folder, or this cannot be called.
-  if (currentParentType() != "folder")
+  // Parent type must be folder or item, or this cannot be called.
+  if (currentParentType() != "folder" && currentParentType() != "item")
   {
     prependNeededRootPathItems();
     return;
   }
 
-  std::unique_ptr<GetFolderRootPathRequest> getRootPathRequest(
-    new GetFolderRootPathRequest(m_networkManager, m_apiUrl, m_girderToken, currentParentId()));
+  std::unique_ptr<GetRootPathRequest> getRootPathRequest(new GetRootPathRequest(
+    m_networkManager, m_apiUrl, m_girderToken, currentParentId(), currentParentType()));
 
   sendAndConnect(getRootPathRequest.get(),
-    &GetFolderRootPathRequest::rootPath,
+    &GetRootPathRequest::rootPath,
     this,
     [this](const QList<QMap<QString, QString> >& rootPath) {
       this->m_currentRootPath = rootPath;
