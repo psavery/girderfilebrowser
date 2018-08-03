@@ -46,6 +46,8 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   // Connect buttons
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
   connect(m_ui->push_goHome, &QPushButton::pressed, this, &GirderFileBrowserDialog::goHome);
+  connect(m_ui->combo_itemMode, SIGNAL(currentIndexChanged(const QString&)),
+          this, SLOT(changeItemMode(const QString&)));
 
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
@@ -168,6 +170,27 @@ void GirderFileBrowserDialog::goUpDirectory()
   newParentInfo["type"] = m_currentRootPathInfo.back().value("type");
 
   emit changeFolder(newParentInfo);
+}
+
+void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
+{
+  using ItemMode = GirderFileBrowserFetcher::ItemMode;
+  ItemMode itemMode;
+  if (itemModeStr == "Treat Items as Files") {
+    itemMode = ItemMode::treatItemsAsFiles;
+  }
+  else if (itemModeStr == "Treat Items as Folders") {
+    itemMode = ItemMode::treatItemsAsFolders;
+  }
+  else {
+    qDebug() << "Warning: ignoring unknown item mode:" << itemModeStr;
+    return;
+  }
+
+  m_girderFileBrowserFetcher->setItemMode(itemMode);
+
+  // Update the current folder since this may change how we interpret the contents
+  emit changeFolder(m_currentParentInfo);
 }
 
 void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>& newParentInfo,

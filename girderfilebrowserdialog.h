@@ -66,6 +66,7 @@ protected:
 private slots:
   void rowActivated(const QModelIndex&);
   void goUpDirectory();
+  void changeItemMode(const QString& text);
 
   void finishChangingFolder(const QMap<QString, QString>& newParentInfo,
     const QList<QMap<QString, QString> >& folders,
