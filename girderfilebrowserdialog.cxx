@@ -16,10 +16,14 @@
 #include <QLabel>
 #include <QNetworkAccessManager>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QStandardItemModel>
 
 namespace cumulus
 {
+
+static const QStringList& ALL_OBJECT_TYPES =
+  { "root", "Users", "Collections", "user", "collection", "folder", "item", "file" };
 
 GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkManager,
   QWidget* parent)
@@ -28,6 +32,7 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   , m_ui(new Ui::GirderFileBrowserDialog)
   , m_itemModel(new QStandardItemModel(this))
   , m_girderFileBrowserFetcher(new GirderFileBrowserFetcher(m_networkManager))
+  , m_choosableTypes(ALL_OBJECT_TYPES)
   , m_folderIcon(new QIcon(":/icons/folder.png"))
   , m_fileIcon(new QIcon(":/icons/file.png"))
 {
@@ -69,6 +74,17 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     &GirderFileBrowserFetcher::error,
     this,
     &GirderFileBrowserDialog::errorReceived);
+
+  // When the user types in the filter box, update the visible rows
+  connect(m_ui->edit_matchesExpression,
+    &QLineEdit::textChanged,
+    this,
+    &GirderFileBrowserDialog::changeVisibleRows);
+
+  // Reset the filter text when we change folders
+  connect(this, &GirderFileBrowserDialog::changeFolder, m_ui->edit_matchesExpression, [this]() {
+    m_ui->edit_matchesExpression->setText("");
+  });
 
   // We will start in root
   QMap<QString, QString> parentInfo;
@@ -212,7 +228,56 @@ void GirderFileBrowserDialog::chooseObject()
 
   QMap<QString, QString> selectedRowInfo = m_cachedRowInfo[row];
 
+  // If this type is not choosable, just ignore it
+  if (!m_choosableTypes.contains(selectedRowInfo["type"]))
+    return;
+
   emit objectChosen(selectedRowInfo);
+}
+
+void GirderFileBrowserDialog::changeVisibleRows(const QString& expression)
+{
+  m_rowsMatchExpression = expression;
+  updateVisibleRows();
+}
+
+void GirderFileBrowserDialog::updateVisibleRows()
+{
+  // First, make all rows visible
+  for (size_t i = 0; i < m_cachedRowInfo.size(); ++i)
+    m_ui->list_fileBrowser->setRowHidden(i, false);
+
+  // First, hide any rows that do not match the type the user is choosing
+  // We will always show these types, even if they aren't choosable.
+  QStringList showTypes = { "Users", "Collections", "user", "collection", "folder" };
+  // Add the choosable types
+  showTypes += m_choosableTypes;
+  for (size_t i = 0; i < m_cachedRowInfo.size(); ++i)
+  {
+    if (!showTypes.contains(m_cachedRowInfo[i]["type"]))
+    {
+      m_ui->list_fileBrowser->setRowHidden(i, true);
+    }
+  }
+
+  // Next, if there is a matching expression, hide all rows whose name does not match the expression
+  if (m_rowsMatchExpression.isEmpty())
+    return;
+
+  QRegularExpression regExp(
+    ".*" + m_rowsMatchExpression + ".*", QRegularExpression::CaseInsensitiveOption);
+
+  for (size_t i = 0; i < m_cachedRowInfo.size(); ++i)
+  {
+    // If the row is already hidden, skip it
+    if (m_ui->list_fileBrowser->isRowHidden(i))
+      continue;
+
+    if (!regExp.match(m_cachedRowInfo[i]["name"]).hasMatch())
+    {
+      m_ui->list_fileBrowser->setRowHidden(i, true);
+    }
+  }
 }
 
 void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>& newParentInfo,
@@ -251,6 +316,7 @@ void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>&
     ++currentRow;
   }
 
+  updateVisibleRows();
   updateRootPathWidget();
 }
 

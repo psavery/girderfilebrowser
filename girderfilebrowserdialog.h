@@ -50,6 +50,7 @@ public:
 
   void setApiUrl(const QString& url);
   void setGirderToken(const QString& token);
+  void setChoosableTypes(const QStringList& choosableTypes);
 
 signals:
   // If a row is chosen, this will be emitted
@@ -63,6 +64,9 @@ signals:
 public slots:
   // A convenience function for authentication success
   void setApiUrlAndGirderToken(const QString& url, const QString& token);
+
+  // All visible rows must match this expression
+  void changeVisibleRows(const QString& expression);
 
 protected:
   void resizeEvent(QResizeEvent* event) override;
@@ -82,6 +86,7 @@ private slots:
 
 private:
   void updateRootPathWidget();
+  void updateVisibleRows();
 
   // Convenience functions...
   QString currentParentName() const { return m_currentParentInfo.value("name"); }
@@ -95,6 +100,12 @@ private:
   std::unique_ptr<GirderFileBrowserFetcher> m_girderFileBrowserFetcher;
 
   QMap<QString, QString> m_currentParentInfo;
+
+  // Only show these types
+  QStringList m_choosableTypes;
+
+  // Only show rows whose names match with this expression
+  QString m_rowsMatchExpression;
 
   // Cache info for each row so we can use it when the user double clicks
   // on the row.

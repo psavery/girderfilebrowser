@@ -59,13 +59,6 @@
      </item>
     </widget>
    </item>
-   <item row="2" column="2">
-    <widget class="QPushButton" name="push_goHome">
-     <property name="text">
-      <string>Go Home</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0" colspan="3">
     <layout class="QHBoxLayout" name="layout_rootPath">
      <property name="spacing">
@@ -76,17 +69,41 @@
      </property>
     </layout>
    </item>
-   <item row="2" column="3" colspan="2">
-    <widget class="QPushButton" name="push_chooseObject">
-     <property name="text">
-      <string>Choose</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="3" colspan="2">
     <widget class="QPushButton" name="push_goUpDir">
      <property name="text">
       <string>Go Up</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Filter Rows:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="edit_matchesExpression">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Only shows rows that contain the text in this box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="push_goHome">
+     <property name="text">
+      <string>Go Home</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QPushButton" name="push_chooseObject">
+     <property name="text">
+      <string>Choose</string>
      </property>
     </widget>
    </item>
