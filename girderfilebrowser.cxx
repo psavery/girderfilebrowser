@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <QApplication>
+#include <QDebug>
 #include <QNetworkAccessManager>
 #include <QString>
 
@@ -63,9 +64,7 @@ int main(int argc, char* argv[])
   // If authentication fails, also print it to the terminal
   QObject::connect(&girderAuthenticator,
     &GirderAuthenticator::authenticationErrored,
-    [](const QString& errorMessage) {
-      std::cerr << errorMessage.toStdString() << "\n";
-    });
+    [](const QString& errorMessage) { std::cerr << errorMessage.toStdString() << "\n"; });
 
   // If we succeed in authenticating, hide the login dialog, set the
   // girder token, and show the browser window.
@@ -81,6 +80,16 @@ int main(int argc, char* argv[])
     &GirderAuthenticator::authenticationSucceeded,
     &gfbDialog,
     &GirderFileBrowserDialog::show);
+
+  // Just a simple demonstration of how an object can be chosen
+  QObject::connect(&gfbDialog,
+    &GirderFileBrowserDialog::objectChosen,
+    [](const QMap<QString, QString>& objectInfo) {
+      qDebug() << "\n*** Object chosen ***";
+      qDebug() << "name:" << objectInfo["name"];
+      qDebug() << "id:" << objectInfo["id"];
+      qDebug() << "type:" << objectInfo["type"];
+    });
 
   return app.exec();
 }

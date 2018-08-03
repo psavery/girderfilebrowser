@@ -50,6 +50,8 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged),
     this,
     &GirderFileBrowserDialog::changeItemMode);
+  connect(
+    m_ui->push_chooseObject, &QPushButton::pressed, this, &GirderFileBrowserDialog::chooseObject);
 
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
@@ -197,6 +199,20 @@ void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
 
   // Update the current folder since this may change how we interpret the contents
   emit changeFolder(m_currentParentInfo);
+}
+
+void GirderFileBrowserDialog::chooseObject()
+{
+  QModelIndexList list = m_ui->list_fileBrowser->selectionModel()->selectedIndexes();
+  if (list.isEmpty())
+    return;
+
+  // We can only choose one object right now
+  int row = list[0].row();
+
+  QMap<QString, QString> selectedRowInfo = m_cachedRowInfo[row];
+
+  emit objectChosen(selectedRowInfo);
 }
 
 void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>& newParentInfo,

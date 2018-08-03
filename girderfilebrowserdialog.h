@@ -52,6 +52,10 @@ public:
   void setGirderToken(const QString& token);
 
 signals:
+  // If a row is chosen, this will be emitted
+  // objectInfo should contain "name", "id", and "type".
+  void objectChosen(const QMap<QString, QString>& objectInfo);
+
   // These will not do anything if an update is currently pending
   void changeFolder(const QMap<QString, QString>& parentInfo);
   void goHome();
@@ -67,6 +71,7 @@ private slots:
   void rowActivated(const QModelIndex&);
   void goUpDirectory();
   void changeItemMode(const QString& text);
+  void chooseObject();
 
   void finishChangingFolder(const QMap<QString, QString>& newParentInfo,
     const QList<QMap<QString, QString> >& folders,
