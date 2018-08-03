@@ -122,7 +122,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
     int newButtonWidth = buttonWidth(button);
 
-    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth) {
+    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth * 0.9) {
       delete button;
       break;
     }
