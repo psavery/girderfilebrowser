@@ -20,6 +20,7 @@ namespace cumulus
 // Set the various names we will use for the requests
 static const QString& GET_FOLDERS_REQUEST = "getFoldersRequest";
 static const QString& GET_ITEMS_REQUEST = "getItemsRequest";
+static const QString& GET_FILES_REQUEST = "getFilesRequest";
 static const QString& GET_ROOT_PATH_REQUEST = "getRootPathRequest";
 static const QString& GET_USERS_REQUEST = "getUsersRequest";
 static const QString& GET_COLLECTIONS_REQUEST = "getCollectionsRequest";
@@ -43,10 +44,12 @@ GirderFileBrowserFetcher::GirderFileBrowserFetcher(QNetworkAccessManager* networ
   : QObject(parent)
   , m_networkManager(networkManager)
   , m_fetchInProgress(false)
+  , m_itemMode(ItemMode::treatItemsAsFiles)
 {
   // These indicate if a folder request is currently pending
   m_folderRequestPending["folders"] = false;
   m_folderRequestPending["items"] = false;
+  m_folderRequestPending["files"] = false;
   m_folderRequestPending["rootPath"] = false;
 
   // Indicate that a fetch is complete if a reply is sent
@@ -89,6 +92,7 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   // For the standard case
   getContainingFolders();
   getContainingItems();
+  getContainingFiles();
   getRootPath();
 }
 
@@ -218,15 +222,10 @@ void GirderFileBrowserFetcher::finishGettingSecondLevelFolderInformation(const Q
 
 void GirderFileBrowserFetcher::finishGettingFolderInformation()
 {
-  // Let's sort these by name. QMap sorts by key.
-  QMap<QString, QString> sortedByName;
-  for (const auto& id : m_currentFolders.keys())
-    sortedByName[m_currentFolders.value(id)] = id;
-
   QList<QMap<QString, QString> > folders;
-  for (const auto& name : sortedByName.keys())
+  for (const auto& id : m_currentFolders.keys())
   {
-    QString id = sortedByName.value(name);
+    QString name = m_currentFolders.value(id);
 
     QMap<QString, QString> folderInfo;
     folderInfo["type"] = "folder";
@@ -235,22 +234,54 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
     folders.append(folderInfo);
   }
 
-  sortedByName.clear();
-  // Let's sort these by name. QMap sorts by key.
-  for (const auto& id : m_currentItems.keys())
-    sortedByName[m_currentItems.value(id)] = id;
-
   QList<QMap<QString, QString> > files;
-  for (const auto& name : sortedByName.keys())
+  // Do we treat items as files?
+  if (m_itemMode == ItemMode::treatItemsAsFiles)
   {
-    QString id = sortedByName.value(name);
+    for (const auto& id : m_currentItems.keys())
+    {
+      QString name = m_currentItems.value(id);
 
-    QMap<QString, QString> fileInfo;
-    fileInfo["type"] = "item";
-    fileInfo["id"] = id;
-    fileInfo["name"] = name;
-    files.append(fileInfo);
+      QMap<QString, QString> fileInfo;
+      fileInfo["type"] = "item";
+      fileInfo["id"] = id;
+      fileInfo["name"] = name;
+      files.append(fileInfo);
+    }
   }
+  // Or do we treat items as folders?
+  else if (m_itemMode == ItemMode::treatItemsAsFolders)
+  {
+    for (const auto& id : m_currentItems.keys())
+    {
+      QString name = m_currentItems.value(id);
+
+      QMap<QString, QString> folderInfo;
+      folderInfo["type"] = "item";
+      folderInfo["id"] = id;
+      folderInfo["name"] = name;
+      folders.append(folderInfo);
+    }
+
+    for (const auto& id : m_currentFiles.keys())
+    {
+      QString name = m_currentFiles.value(id);
+
+      QMap<QString, QString> fileInfo;
+      fileInfo["type"] = "file";
+      fileInfo["id"] = id;
+      fileInfo["name"] = name;
+      files.append(fileInfo);
+    }
+  }
+
+  // Sort the folders and files by name
+  auto sortFunc = [](const QMap<QString, QString>& a, const QMap<QString, QString>& b) {
+    return a["name"] < b["name"];
+  };
+
+  std::sort(folders.begin(), folders.end(), sortFunc);
+  std::sort(files.begin(), files.end(), sortFunc);
 
   emit folderInformation(m_currentParentInfo, folders, files, m_currentRootPath);
 }
@@ -258,6 +289,11 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
 void GirderFileBrowserFetcher::getContainingFolders()
 {
   m_currentFolders.clear();
+
+  // Parent type must be user, collection, or folder, or there are no folders
+  QStringList folderParentTypes{ "collection", "user", "folder" };
+  if (!folderParentTypes.contains(currentParentType()))
+    return;
 
   std::unique_ptr<ListFoldersRequest> getFoldersRequest(new ListFoldersRequest(
     m_networkManager, m_apiUrl, m_girderToken, currentParentId(), currentParentType()));
@@ -289,14 +325,106 @@ void GirderFileBrowserFetcher::getContainingItems()
   sendAndConnect(getItemsRequest.get(),
     &ListItemsRequest::items,
     this,
-    [this](const QMap<QString, QString>& items) {
-      this->m_currentItems = items;
-      this->m_folderRequestPending["items"] = false;
-      this->finishGettingFolderInformationIfReady();
-    });
+    &GirderFileBrowserFetcher::finishGettingContainingItems);
 
   m_girderRequests[GET_ITEMS_REQUEST] = std::move(getItemsRequest);
   m_folderRequestPending["items"] = true;
+}
+
+void GirderFileBrowserFetcher::finishGettingContainingItems(const QMap<QString, QString>& items)
+{
+  m_currentItems = items;
+
+  // If we are to treat items as files, we are done
+  if (m_itemMode == ItemMode::treatItemsAsFiles || items.empty())
+  {
+    m_folderRequestPending["items"] = false;
+    finishGettingFolderInformationIfReady();
+  }
+  else if (m_itemMode == ItemMode::treatItemsAsFolders)
+  {
+    // Check the contents of every item. If it only contains a file,
+    // treat that item as a file.
+    // This results in a lot of api calls. Maybe it should be optimized somehow
+    // in the future.
+    for (const QString& itemId : m_currentItems.keys())
+    {
+      std::unique_ptr<ListFilesRequest> listFilesRequest(
+        new ListFilesRequest(m_networkManager, m_apiUrl, m_girderToken, itemId));
+
+      sendAndConnect(listFilesRequest.get(),
+        &ListFilesRequest::files,
+        this,
+        [this, itemId](const QMap<QString, QString>& files) {
+          this->finishGettingFilesForContainingItems(files, itemId);
+        });
+
+      m_itemContentsRequests.push_back(std::move(listFilesRequest));
+    }
+  }
+}
+
+// Only called if m_itemMode is ItemMode::treatItemsAsFolders
+void GirderFileBrowserFetcher::finishGettingFilesForContainingItems(
+  const QMap<QString, QString>& files,
+  const QString& itemId)
+{
+  // Do nothing if an error occurred
+  if (m_folderRequestErrorOccurred)
+  {
+    m_itemContentsRequests.clear();
+    return;
+  }
+
+  QObject* sender = QObject::sender();
+
+  // Remove this object from the item contents requests
+  auto it = std::find_if(m_itemContentsRequests.begin(),
+    m_itemContentsRequests.end(),
+    [sender](const std::unique_ptr<GirderRequest>& request) { return sender == request.get(); });
+
+  if (it != m_itemContentsRequests.end())
+    m_itemContentsRequests.erase(it);
+
+  // If there is only one file that has the same name, remove the item and use the file instead.
+  if (files.keys().size() == 1 && files.values()[0] == m_currentItems[itemId])
+  {
+    m_currentItems.remove(itemId);
+    m_currentFiles[files.keys()[0]] = files.values()[0];
+  }
+
+  // If we have finished the last item, indicate that we are done.
+  if (m_itemContentsRequests.empty())
+  {
+    m_folderRequestPending["items"] = false;
+    finishGettingFolderInformationIfReady();
+  }
+}
+
+void GirderFileBrowserFetcher::getContainingFiles()
+{
+  m_currentFiles.clear();
+
+  // Parent type must be item, or there are no files
+  if (currentParentType() != "item")
+    return;
+
+  std::unique_ptr<ListFilesRequest> listFilesRequest(
+    new ListFilesRequest(m_networkManager, m_apiUrl, m_girderToken, currentParentId()));
+
+  sendAndConnect(listFilesRequest.get(),
+    &ListFilesRequest::files,
+    this,
+    [this](const QMap<QString, QString>& files) {
+      qDebug() << "Files have arrived!";
+      this->m_currentFiles = files;
+      this->m_folderRequestPending["files"] = false;
+      this->finishGettingFolderInformationIfReady();
+    });
+
+  qDebug() << "Time to wait for files!";
+  m_girderRequests[GET_FILES_REQUEST] = std::move(listFilesRequest);
+  m_folderRequestPending["files"] = true;
 }
 
 void GirderFileBrowserFetcher::prependNeededRootPathItems()
@@ -377,8 +505,14 @@ void GirderFileBrowserFetcher::errorReceived(const QString& message)
   else if (sender == m_girderRequests[GET_ITEMS_REQUEST].get())
   {
     m_folderRequestErrorOccurred = true;
-    completeMessage += "An error occurred while updating items:\n";
+    completeMessage += "An error occurred while getting items:\n";
     m_folderRequestPending["items"] = false;
+  }
+  else if (sender == m_girderRequests[GET_FILES_REQUEST].get())
+  {
+    m_folderRequestErrorOccurred = true;
+    completeMessage += "An error occurred while getting files:\n";
+    m_folderRequestPending["files"] = false;
   }
   else if (sender == m_girderRequests[GET_ROOT_PATH_REQUEST].get())
   {
@@ -397,6 +531,15 @@ void GirderFileBrowserFetcher::errorReceived(const QString& message)
   else if (sender == m_girderRequests[GET_MY_USER_REQUEST].get())
   {
     completeMessage += "Failed to get information about current user:\n";
+  }
+  else if (!m_itemContentsRequests.empty() &&
+    std::any_of(m_itemContentsRequests.cbegin(),
+      m_itemContentsRequests.cend(),
+      [sender](const std::unique_ptr<GirderRequest>& uPtr) { return uPtr.get() == sender; }))
+  {
+    m_itemContentsRequests.clear();
+    m_folderRequestErrorOccurred = true;
+    completeMessage += "Failed to get one of the item's contents:\n";
   }
   completeMessage += message;
   emit error(message);
