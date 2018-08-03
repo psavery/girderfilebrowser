@@ -77,13 +77,14 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   // When the user types in the filter box, update the visible rows
   connect(m_ui->edit_matchesExpression,
-    &QLineEdit::textChanged,
+    &QLineEdit::textEdited,
     this,
     &GirderFileBrowserDialog::changeVisibleRows);
 
   // Reset the filter text when we change folders
   connect(this, &GirderFileBrowserDialog::changeFolder, m_ui->edit_matchesExpression, [this]() {
-    m_ui->edit_matchesExpression->setText("");
+    this->m_ui->edit_matchesExpression->setText("");
+    this->m_rowsMatchExpression = "";
   });
 
   // We will start in root
