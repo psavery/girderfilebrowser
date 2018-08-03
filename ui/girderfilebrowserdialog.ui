@@ -69,20 +69,10 @@
      </property>
     </layout>
    </item>
-   <item row="0" column="3" colspan="2">
-    <widget class="QPushButton" name="push_goUpDir">
-     <property name="text">
-      <string>Go Up</string>
-     </property>
-     <property name="autoDefault">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Filter Rows:</string>
+      <string>Filter:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -99,7 +89,7 @@
    <item row="2" column="3" colspan="2">
     <widget class="QPushButton" name="push_goHome">
      <property name="text">
-      <string>Go Home</string>
+      <string>Home</string>
      </property>
      <property name="autoDefault">
       <bool>false</bool>
@@ -116,15 +106,25 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="3" colspan="2">
+    <widget class="QPushButton" name="push_goUpDir">
+     <property name="text">
+      <string>Up</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
-  <tabstop>push_goUpDir</tabstop>
   <tabstop>list_fileBrowser</tabstop>
-  <tabstop>combo_itemMode</tabstop>
   <tabstop>edit_matchesExpression</tabstop>
+  <tabstop>push_goUpDir</tabstop>
   <tabstop>push_goHome</tabstop>
   <tabstop>push_chooseObject</tabstop>
+  <tabstop>combo_itemMode</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -122,6 +122,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
   // Add the widgets in backwards
   // This button doesn't do anything... it is only here for consistency
   QPushButton* firstButton = new QPushButton(currentParentName() + "/", parentWidget);
+  firstButton->setAutoDefault(false);
   layout->addWidget(firstButton);
 
   // Sum up the total button width and make sure we don't exceed it
@@ -135,6 +136,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
     QString name = rootPathItem.value("name");
 
     QPushButton* button = new QPushButton(name + "/", parentWidget);
+    button->setAutoDefault(false);
     connect(button, &QPushButton::pressed, this, callFunc);
 
     int newButtonWidth = buttonWidth(button);
