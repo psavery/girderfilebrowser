@@ -34,8 +34,10 @@ class SMTKCUMULUSEXT_EXPORT GirderRequest : public QObject
   Q_OBJECT
 
 public:
-  GirderRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, QObject* parent = 0);
+  GirderRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    QObject* parent = 0);
   ~GirderRequest();
 
   void virtual send() = 0;
@@ -56,8 +58,11 @@ class ListItemsRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  ListItemsRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString folderId, QObject* parent = 0);
+  ListItemsRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString folderId,
+    QObject* parent = 0);
   ~ListItemsRequest();
 
   void send();
@@ -78,8 +83,12 @@ class ListFoldersRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  ListFoldersRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString parentId, const QString parentType = "folder", QObject* parent = 0);
+  ListFoldersRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString parentId,
+    const QString parentType = "folder",
+    QObject* parent = 0);
   ~ListFoldersRequest();
 
   void send();
@@ -100,8 +109,11 @@ class ListFilesRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  ListFilesRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString itemId, QObject* parent = 0);
+  ListFilesRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString itemId,
+    QObject* parent = 0);
   ~ListFilesRequest();
 
   void send();
@@ -124,8 +136,11 @@ class DownloadFolderRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  DownloadFolderRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString& downloadPath, const QString& folderId,
+  DownloadFolderRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString& downloadPath,
+    const QString& folderId,
     QObject* parent = 0);
   ~DownloadFolderRequest();
 
@@ -153,8 +168,12 @@ class DownloadFileRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  DownloadFileRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString& path, const QString& fileName, const QString& fileId,
+  DownloadFileRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString& path,
+    const QString& fileName,
+    const QString& fileId,
     QObject* parent = 0);
   ~DownloadFileRequest();
 
@@ -178,8 +197,12 @@ class DownloadItemRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  DownloadItemRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString& path, const QString& itemId, QObject* parent = 0);
+  DownloadItemRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString& path,
+    const QString& itemId,
+    QObject* parent = 0);
   ~DownloadItemRequest();
 
   void send();
@@ -202,8 +225,11 @@ class GetFolderParentRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  GetFolderParentRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString& folderId, QObject* parent = 0);
+  GetFolderParentRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString& folderId,
+    QObject* parent = 0);
   ~GetFolderParentRequest();
 
   void send();
@@ -219,14 +245,18 @@ private:
   QString m_folderId;
 };
 
-class GetFolderRootPathRequest : public GirderRequest
+class GetRootPathRequest : public GirderRequest
 {
   Q_OBJECT
 
 public:
-  GetFolderRootPathRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, const QString& folderId, QObject* parent = 0);
-  ~GetFolderRootPathRequest();
+  GetRootPathRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    const QString& parentId,
+    const QString& parentType = "folder",
+    QObject* parent = 0);
+  ~GetRootPathRequest();
 
   void send();
 
@@ -234,13 +264,14 @@ signals:
   // A hierarchy of folders to the root folder. The first item in the
   // QList should be the user. The rest are folders.
   // The keys "type", "id", and "name" should be present for each entry.
-  void rootPath(const QList<QMap<QString, QString>>& rootPathList);
+  void rootPath(const QList<QMap<QString, QString> >& rootPathList);
 
 private slots:
   void finished();
 
 private:
-  QString m_folderId;
+  QString m_parentId;
+  QString m_parentType;
 };
 
 class GetUsersRequest : public GirderRequest
@@ -248,8 +279,10 @@ class GetUsersRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  GetUsersRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, QObject* parent = 0);
+  GetUsersRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    QObject* parent = 0);
   ~GetUsersRequest();
 
   void send();
@@ -268,8 +301,10 @@ class GetCollectionsRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  GetCollectionsRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, QObject* parent = 0);
+  GetCollectionsRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    QObject* parent = 0);
   ~GetCollectionsRequest();
 
   void send();
@@ -288,8 +323,10 @@ class GetMyUserRequest : public GirderRequest
   Q_OBJECT
 
 public:
-  GetMyUserRequest(QNetworkAccessManager* networkManager, const QString& girderUrl,
-    const QString& girderToken, QObject* parent = 0);
+  GetMyUserRequest(QNetworkAccessManager* networkManager,
+    const QString& girderUrl,
+    const QString& girderToken,
+    QObject* parent = 0);
   ~GetMyUserRequest();
 
   void send();
@@ -303,7 +340,6 @@ signals:
 private slots:
   void finished();
 };
-
 }
 
 #endif

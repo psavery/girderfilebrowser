@@ -597,20 +597,21 @@ void GetFolderParentRequest::finished()
   reply->deleteLater();
 }
 
-GetFolderRootPathRequest::GetFolderRootPathRequest(QNetworkAccessManager* networkManager,
-  const QString& girderUrl, const QString& girderToken, const QString& folderId, QObject* parent)
+GetRootPathRequest::GetRootPathRequest(QNetworkAccessManager* networkManager,
+  const QString& girderUrl, const QString& girderToken, const QString& parentId, const QString& parentType, QObject* parent)
   : GirderRequest(networkManager, girderUrl, girderToken, parent)
-  , m_folderId(folderId)
+  , m_parentId(parentId)
+  , m_parentType(parentType)
 {
 }
 
-GetFolderRootPathRequest::~GetFolderRootPathRequest()
+GetRootPathRequest::~GetRootPathRequest()
 {
 }
 
-void GetFolderRootPathRequest::send()
+void GetRootPathRequest::send()
 {
-  QUrl url(QString("%1/folder/%2/rootpath").arg(m_girderUrl).arg(m_folderId));
+  QUrl url(QString("%1/%2/%3/rootpath").arg(m_girderUrl).arg(m_parentType).arg(m_parentId));
 
   QNetworkRequest request(url);
   request.setRawHeader(QByteArray("Girder-Token"), m_girderToken.toUtf8());
@@ -619,7 +620,7 @@ void GetFolderRootPathRequest::send()
   QObject::connect(reply, SIGNAL(finished()), this, SLOT(finished()));
 }
 
-void GetFolderRootPathRequest::finished()
+void GetRootPathRequest::finished()
 {
   auto reply = qobject_cast<QNetworkReply*>(this->sender());
   QByteArray bytes = reply->readAll();
@@ -633,7 +634,7 @@ void GetFolderRootPathRequest::finished()
 
     if (!jsonResponse || jsonResponse->type != cJSON_Array)
     {
-      emit error(QString("Invalid response to GetFolderRootPathRequest."));
+      emit error(QString("Invalid response to GetRootPathRequest."));
       cJSON_Delete(jsonResponse);
       return;
     }
