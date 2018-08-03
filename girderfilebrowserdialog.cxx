@@ -46,8 +46,10 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   // Connect buttons
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
   connect(m_ui->push_goHome, &QPushButton::pressed, this, &GirderFileBrowserDialog::goHome);
-  connect(m_ui->combo_itemMode, SIGNAL(currentIndexChanged(const QString&)),
-          this, SLOT(changeItemMode(const QString&)));
+  connect(m_ui->combo_itemMode,
+    static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged),
+    this,
+    &GirderFileBrowserDialog::changeItemMode);
 
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
@@ -146,7 +148,8 @@ void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
 
     // If we are to treat items as folders, add items to this list
     if (m_girderFileBrowserFetcher->itemMode() ==
-      GirderFileBrowserFetcher::ItemMode::treatItemsAsFolders) {
+      GirderFileBrowserFetcher::ItemMode::treatItemsAsFolders)
+    {
       folderTypes.append("item");
     }
 
@@ -176,13 +179,16 @@ void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
 {
   using ItemMode = GirderFileBrowserFetcher::ItemMode;
   ItemMode itemMode;
-  if (itemModeStr == "Treat Items as Files") {
+  if (itemModeStr == "Treat Items as Files")
+  {
     itemMode = ItemMode::treatItemsAsFiles;
   }
-  else if (itemModeStr == "Treat Items as Folders") {
+  else if (itemModeStr == "Treat Items as Folders")
+  {
     itemMode = ItemMode::treatItemsAsFolders;
   }
-  else {
+  else
+  {
     qDebug() << "Warning: ignoring unknown item mode:" << itemModeStr;
     return;
   }
