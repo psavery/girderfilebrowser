@@ -14,8 +14,6 @@
 #ifndef __smtk_extension_cumulus_girderfilebrowserdialog_h
 #define __smtk_extension_cumulus_girderfilebrowserdialog_h
 
-#include "Exports.h"
-
 #include <QDialog>
 #include <QMap>
 #include <QString>
@@ -38,7 +36,7 @@ namespace cumulus
 
 class GirderFileBrowserFetcher;
 
-class SMTKCUMULUSEXT_EXPORT GirderFileBrowserDialog : public QDialog
+class GirderFileBrowserDialog : public QDialog
 {
   Q_OBJECT
 

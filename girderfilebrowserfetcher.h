@@ -14,8 +14,6 @@
 #ifndef __smtk_extension_cumulus_girderfilebrowserfetcher_h
 #define __smtk_extension_cumulus_girderfilebrowserfetcher_h
 
-#include "Exports.h"
-
 #include <QMap>
 #include <QObject>
 #include <QString>
@@ -30,7 +28,7 @@ namespace cumulus
 
 class GirderRequest;
 
-class SMTKCUMULUSEXT_EXPORT GirderFileBrowserFetcher : public QObject
+class GirderFileBrowserFetcher : public QObject
 {
   Q_OBJECT
 

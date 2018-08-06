@@ -19,15 +19,13 @@
 #include <QObject>
 #include <QString>
 
-#include "Exports.h"
-
 class QNetworkAccessManager;
 class QNetworkReply;
 
 namespace cumulus
 {
 
-class SMTKCUMULUSEXT_EXPORT GirderAuthenticator : public QObject
+class GirderAuthenticator : public QObject
 {
   Q_OBJECT
 

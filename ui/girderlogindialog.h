@@ -19,8 +19,6 @@
 #include <QDialog>
 #include <QString>
 
-#include "Exports.h"
-
 namespace Ui
 {
 class GirderLoginDialog;
@@ -29,7 +27,7 @@ class GirderLoginDialog;
 namespace cumulus
 {
 
-class SMTKCUMULUSEXT_EXPORT GirderLoginDialog : public QDialog
+class GirderLoginDialog : public QDialog
 {
   Q_OBJECT
 

@@ -18,8 +18,8 @@
 #include <QString>
 
 #include "girderauthenticator.h"
-#include "girderfilebrowserdialog.h"
-#include "girderlogindialog.h"
+#include "ui/girderfilebrowserdialog.h"
+#include "ui/girderlogindialog.h"
 
 int main(int argc, char* argv[])
 {
