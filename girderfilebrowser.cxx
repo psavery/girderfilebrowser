@@ -43,13 +43,24 @@ int main(int argc, char* argv[])
     loginDialog.setApiUrl(apiUrl);
 
   // Attempt api key authentication if both environment variables are present
+  std::unique_ptr<QMetaObject::Connection> tempCon(new QMetaObject::Connection());
   if (!apiUrl.isEmpty() && !apiKey.isEmpty())
   {
     girderAuthenticator.authenticateApiKey(apiUrl, apiKey);
+    // If authentication fails, show the dialog, but only once.
+    *tempCon = QObject::connect(&girderAuthenticator,
+      &GirderAuthenticator::authenticationErrored,
+      &loginDialog,
+      [&loginDialog, &tempCon]() {
+        loginDialog.show();
+        tempCon.reset();
+      });
   }
-
-  // This will be hidden automatically if api key authentication succeeds
-  loginDialog.show();
+  else
+  {
+    tempCon.reset();
+    loginDialog.show();
+  }
 
   // Connect the "ok" button of the login dialog to the girder authenticator
   QObject::connect(&loginDialog,
