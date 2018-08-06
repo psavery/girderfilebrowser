@@ -53,6 +53,8 @@ void GirderLoginDialog::authenticationFailed(const QString& message)
     simplifiedMessage = "Server could not be reached";
   else if (message.contains("You don't have a password"))
     simplifiedMessage = "Your account doesn't have a password";
+  else if (message.contains("Invalid API key"))
+    simplifiedMessage = "Invalid API key";
   else
     simplifiedMessage = "Unknown error. Check terminal output.";
 
