@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_utils_h
-#define __smtk_extension_cumulus_utils_h
+#ifndef girderfilebrowser_utils_h
+#define girderfilebrowser_utils_h
 
 class QNetworkReply;
 class QByteArray;

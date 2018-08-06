@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_girderlogindialog_h
-#define __smtk_extension_cumulus_girderlogindialog_h
+#ifndef girderfilebrowser_girderlogindialog_h
+#define girderfilebrowser_girderlogindialog_h
 
 #include <memory>
 

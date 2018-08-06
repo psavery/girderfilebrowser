@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_girderrequest_h
-#define __smtk_extension_cumulus_girderrequest_h
+#ifndef girderfilebrowser_girderrequest_h
+#define girderfilebrowser_girderrequest_h
 
 #include <QList>
 #include <QMap>

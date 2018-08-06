@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_girderauthenticator_h
-#define __smtk_extension_cumulus_girderauthenticator_h
+#ifndef girderfilebrowser_girderauthenticator_h
+#define girderfilebrowser_girderauthenticator_h
 
 #include <memory>
 

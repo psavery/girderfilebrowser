@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_girderfilebrowserfetcher_h
-#define __smtk_extension_cumulus_girderfilebrowserfetcher_h
+#ifndef girderfilebrowser_girderfilebrowserfetcher_h
+#define girderfilebrowser_girderfilebrowserfetcher_h
 
 #include <QMap>
 #include <QObject>

@@ -11,8 +11,8 @@
 // .SECTION Description
 // .SECTION See Also
 
-#ifndef __smtk_extension_cumulus_girderfilebrowserdialog_h
-#define __smtk_extension_cumulus_girderfilebrowserdialog_h
+#ifndef girderfilebrowser_girderfilebrowserdialog_h
+#define girderfilebrowser_girderfilebrowserdialog_h
 
 #include <QDialog>
 #include <QMap>
