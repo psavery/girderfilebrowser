@@ -33,6 +33,7 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   , m_itemModel(new QStandardItemModel(this))
   , m_girderFileBrowserFetcher(new GirderFileBrowserFetcher(m_networkManager))
   , m_choosableTypes(ALL_OBJECT_TYPES)
+  , m_rootPathOffset(0)
   , m_folderIcon(new QIcon(":/icons/folder.png"))
   , m_fileIcon(new QIcon(":/icons/file.png"))
 {
@@ -87,6 +88,10 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     this->m_rowsMatchExpression = "";
   });
 
+  // Reset the root path offset when we change folders
+  connect(
+    this, &GirderFileBrowserDialog::changeFolder, this, [this]() { this->m_rootPathOffset = 0; });
+
   // We will start in root
   QMap<QString, QString> parentInfo;
   parentInfo["name"] = "root";
@@ -119,17 +124,61 @@ void GirderFileBrowserDialog::updateRootPathWidget()
     item->widget()->deleteLater();
   }
 
-  // Add the widgets in backwards
-  // This button doesn't do anything... it is only here for consistency
-  QPushButton* firstButton = new QPushButton(currentParentName() + "/", parentWidget);
-  firstButton->setAutoDefault(false);
-  layout->addWidget(firstButton);
+  // The scroll left button
+  QPushButton* scrollLeft = new QPushButton("<", parentWidget);
+  scrollLeft->setAutoDefault(false);
+  int scrollLeftWidth = scrollLeft->fontMetrics().width(scrollLeft->text()) * 2;
+  scrollLeft->setFixedWidth(scrollLeftWidth);
+  layout->addWidget(scrollLeft);
+  connect(scrollLeft, &QPushButton::pressed, this, [this]() {
+    ++this->m_rootPathOffset;
+    this->updateRootPathWidget();
+  });
+
+  // The scroll right button
+  QPushButton* scrollRight = new QPushButton(">", parentWidget);
+  scrollRight->setAutoDefault(false);
+  int scrollRightWidth = scrollRight->fontMetrics().width(scrollRight->text()) * 2;
+  scrollRight->setFixedWidth(scrollRightWidth);
+  scrollRight->setEnabled(m_rootPathOffset != 0);
+  layout->addWidget(scrollRight);
+  connect(scrollRight, &QPushButton::pressed, this, [this]() {
+    --this->m_rootPathOffset;
+    this->updateRootPathWidget();
+  });
 
   // Sum up the total button width and make sure we don't exceed it
-  int totalWidgetWidth = buttonWidth(firstButton);
+  int totalWidgetWidth = scrollLeftWidth;
+  totalWidgetWidth += scrollRightWidth;
+
+  // Add the widgets in backwards
+  int currentOffset = 0;
+  bool rootButtonAdded = false;
+  if (m_rootPathOffset == 0)
+  {
+    // This button doesn't do anything... it is only here for consistency
+    QPushButton* firstButton = new QPushButton(currentParentName() + "/", parentWidget);
+    firstButton->setAutoDefault(false);
+    layout->insertWidget(1, firstButton);
+
+    totalWidgetWidth += buttonWidth(firstButton);
+
+    if (currentParentName() == "root")
+      rootButtonAdded = true;
+  }
+  else
+  {
+    currentOffset += 1;
+  }
 
   for (auto it = m_currentRootPathInfo.rbegin(); it != m_currentRootPathInfo.rend(); ++it)
   {
+    if (currentOffset < m_rootPathOffset)
+    {
+      ++currentOffset;
+      continue;
+    }
+
     const auto& rootPathItem = *it;
 
     auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
@@ -141,15 +190,22 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
     int newButtonWidth = buttonWidth(button);
 
-    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth * 0.9)
+    // We want to make sure at least one button is added
+    if (newButtonWidth + totalWidgetWidth > oldLayoutWidth * 0.92 && layout->count() > 2)
     {
       delete button;
       break;
     }
 
-    layout->insertWidget(0, button);
+    if (name == "root")
+      rootButtonAdded = true;
+
+    layout->insertWidget(1, button);
     totalWidgetWidth += newButtonWidth;
   }
+
+  // Only enable the scroll left if there is room to offset in that direction
+  scrollLeft->setEnabled(!rootButtonAdded);
 }
 
 void GirderFileBrowserDialog::resizeEvent(QResizeEvent* event)
