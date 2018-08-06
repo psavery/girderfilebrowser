@@ -20,8 +20,14 @@ set(SRCS
   cJSON.c
 )
 
+#resource files
+set(resources
+ resources.qrc
+)
+qt5_add_resources(res_srcs ${resources})
+
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_executable(girderfilebrowser MACOSX_BUNDLE WIN32 ${SRCS})
+add_executable(girderfilebrowser MACOSX_BUNDLE WIN32 ${SRCS} ${res_srcs})
 
 qt5_use_modules(girderfilebrowser Core Network Gui Widgets)
