@@ -88,10 +88,6 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     this->m_rowsMatchExpression = "";
   });
 
-  // Reset the root path offset when we change folders
-  connect(
-    this, &GirderFileBrowserDialog::changeFolder, this, [this]() { this->m_rootPathOffset = 0; });
-
   // We will start in root
   QMap<QString, QString> parentInfo;
   parentInfo["name"] = "root";
@@ -342,6 +338,9 @@ void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>&
   const QList<QMap<QString, QString> >& files,
   const QList<QMap<QString, QString> >& rootPath)
 {
+  // Reset the root path offset when we change folders
+  m_rootPathOffset = 0;
+
   m_currentParentInfo = newParentInfo;
   m_currentRootPathInfo = rootPath;
 
