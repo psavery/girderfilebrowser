@@ -33,6 +33,14 @@ int main(int argc, char* argv[])
   using cumulus::GirderAuthenticator;
   GirderAuthenticator girderAuthenticator(networkManager.get());
 
+  // Below is an example of creating a custom root folder.
+  // It needs to match the girder information exactly, or the behavior is
+  // undefined
+//  QMap<QString, QString> customRootFolder;
+//  customRootFolder["name"] = "Public";
+//  customRootFolder["id"] = "5b16b1fd8d777f15ebe1ffc9";
+//  customRootFolder["type"] = "folder";
+
   using cumulus::GirderFileBrowserDialog;
   GirderFileBrowserDialog gfbDialog(networkManager.get());
 
@@ -87,6 +95,10 @@ int main(int argc, char* argv[])
     &GirderAuthenticator::authenticationSucceeded,
     &gfbDialog,
     &GirderFileBrowserDialog::setApiUrlAndGirderToken);
+  QObject::connect(&girderAuthenticator,
+    &GirderAuthenticator::authenticationSucceeded,
+    &gfbDialog,
+    &GirderFileBrowserDialog::begin);
   QObject::connect(&girderAuthenticator,
     &GirderAuthenticator::authenticationSucceeded,
     &gfbDialog,

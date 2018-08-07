@@ -41,7 +41,10 @@ class GirderFileBrowserDialog : public QDialog
   Q_OBJECT
 
 public:
+  // If customRootFolder is set, that will be the root folder instead of the
+  // standard one.
   explicit GirderFileBrowserDialog(QNetworkAccessManager* networkAccessManager,
+    const QMap<QString, QString>& customRootFolder = QMap<QString, QString>(),
     QWidget* parent = nullptr);
 
   virtual ~GirderFileBrowserDialog() override;
@@ -60,6 +63,10 @@ signals:
   void goHome();
 
 public slots:
+  // Call this when the api url and girder token are set, and browsing
+  // is ready to start.
+  void begin();
+
   // A convenience function for authentication success
   void setApiUrlAndGirderToken(const QString& url, const QString& token);
 
@@ -99,6 +106,9 @@ private:
 
   QMap<QString, QString> m_currentParentInfo;
 
+  // What is the root info?
+  QMap<QString, QString> m_rootFolder;
+
   // Only show these types
   QStringList m_choosableTypes;
 
@@ -117,6 +127,11 @@ private:
   std::unique_ptr<QIcon> m_folderIcon;
   std::unique_ptr<QIcon> m_fileIcon;
 };
+
+inline void GirderFileBrowserDialog::begin()
+{
+  emit changeFolder(m_rootFolder);
+}
 
 } // end of namespace
 

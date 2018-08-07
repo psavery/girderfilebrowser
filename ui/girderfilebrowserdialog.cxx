@@ -25,13 +25,41 @@ namespace cumulus
 static const QStringList& ALL_OBJECT_TYPES =
   { "root", "Users", "Collections", "user", "collection", "folder", "item", "file" };
 
+static bool isRootInfoValid(QMap<QString, QString>& rootInfo)
+{
+  bool infoIsValid = true;
+
+  if (!rootInfo.contains("name"))
+  {
+    qDebug() << "Error in " << __FUNCTION__ << ": root folder must contain 'name'!";
+    qDebug() << "Changing to default root folder...";
+    infoIsValid = false;
+  }
+  if (!rootInfo.contains("id"))
+  {
+    qDebug() << "Error in " << __FUNCTION__ << ": root folder must contain 'id'!";
+    qDebug() << "Changing to default root folder...";
+    infoIsValid = false;
+  }
+  if (!rootInfo.contains("type"))
+  {
+    qDebug() << "Error in " << __FUNCTION__ << ": root folder must contain 'type'!";
+    qDebug() << "Changing to default root folder...";
+    infoIsValid = false;
+  }
+
+  return infoIsValid;
+}
+
 GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkManager,
+  const QMap<QString, QString>& customRootFolder,
   QWidget* parent)
   : QDialog(parent)
   , m_networkManager(networkManager)
   , m_ui(new Ui::GirderFileBrowserDialog)
   , m_itemModel(new QStandardItemModel(this))
   , m_girderFileBrowserFetcher(new GirderFileBrowserFetcher(m_networkManager))
+  , m_rootFolder(customRootFolder)
   , m_choosableTypes(ALL_OBJECT_TYPES)
   , m_rootPathOffset(0)
   , m_folderIcon(new QIcon(":/icons/folder.png"))
@@ -42,6 +70,10 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   m_ui->list_fileBrowser->setModel(m_itemModel.get());
 
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
+
+  bool usingCustomRootFolder = false;
+  if (!m_rootFolder.isEmpty() && isRootInfoValid(m_rootFolder))
+    usingCustomRootFolder = true;
 
   // This is if the user presses the "enter" key... Do the same thing as double-click.
   connect(m_ui->list_fileBrowser,
@@ -63,10 +95,27 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     &GirderFileBrowserDialog::changeFolder,
     m_girderFileBrowserFetcher.get(),
     &GirderFileBrowserFetcher::getFolderInformation);
-  connect(this,
-    &GirderFileBrowserDialog::goHome,
-    m_girderFileBrowserFetcher.get(),
-    &GirderFileBrowserFetcher::getHomeFolderInformation);
+
+  // The "go home" button.
+  if (!usingCustomRootFolder)
+  {
+    // If we are not using a custom root folder, "go home" will go to the user's
+    // home directory.
+    connect(this,
+      &GirderFileBrowserDialog::goHome,
+      m_girderFileBrowserFetcher.get(),
+      &GirderFileBrowserFetcher::getHomeFolderInformation);
+  }
+  else
+  {
+    // If we are using a custom root folder, "go home" should just go to the
+    // root folder (in case the home folder is outside the root path).
+    connect(this,
+      &GirderFileBrowserDialog::goHome,
+      this,
+      [this](){ emit this->changeFolder(this->m_rootFolder); });
+  }
+
   connect(m_girderFileBrowserFetcher.get(),
     &GirderFileBrowserFetcher::folderInformation,
     this,
@@ -88,13 +137,18 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     this->m_rowsMatchExpression = "";
   });
 
-  // We will start in root
-  QMap<QString, QString> parentInfo;
-  parentInfo["name"] = "root";
-  parentInfo["id"] = "";
-  parentInfo["type"] = "root";
-
-  emit changeFolder(parentInfo);
+  if (!usingCustomRootFolder)
+  {
+    // Start in root unless directed otherwise
+    m_rootFolder["name"] = "root";
+    m_rootFolder["id"] = "";
+    m_rootFolder["type"] = "root";
+  }
+  else
+  {
+    // We will only set this if we are using a custom root folder
+    m_girderFileBrowserFetcher->setCustomRootInfo(m_rootFolder);
+  }
 }
 
 GirderFileBrowserDialog::~GirderFileBrowserDialog() = default;
@@ -159,7 +213,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
     totalWidgetWidth += buttonWidth(firstButton);
 
-    if (currentParentName() == "root")
+    if (m_currentParentInfo == m_rootFolder)
       rootButtonAdded = true;
   }
   else
@@ -193,7 +247,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
       break;
     }
 
-    if (name == "root")
+    if (rootPathItem == m_rootFolder)
       rootButtonAdded = true;
 
     layout->insertWidget(1, button);
@@ -232,7 +286,7 @@ void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
 void GirderFileBrowserDialog::goUpDirectory()
 {
   QString parentName, parentId, parentType;
-  if (currentParentType() == "root")
+  if (m_currentParentInfo == m_rootFolder)
   {
     // Do nothing
     return;

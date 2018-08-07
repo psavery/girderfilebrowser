@@ -462,6 +462,13 @@ void GirderFileBrowserFetcher::prependNeededRootPathItems()
   m_currentRootPath = prependedRootPathItems + m_currentRootPath;
 }
 
+static void popFrontUntilEqual(QList<QMap<QString, QString> >& list,
+                               const QMap<QString, QString>& map)
+{
+  while (!list.isEmpty() && list.front() != map)
+    list.pop_front();
+}
+
 void GirderFileBrowserFetcher::getRootPath()
 {
   m_currentRootPath.clear();
@@ -482,6 +489,9 @@ void GirderFileBrowserFetcher::getRootPath()
     [this](const QList<QMap<QString, QString> >& rootPath) {
       this->m_currentRootPath = rootPath;
       this->prependNeededRootPathItems();
+      // If there is a custom root, remove all items till we hit that one
+      if (!this->m_customRootInfo.isEmpty())
+        popFrontUntilEqual(this->m_currentRootPath, this->m_customRootInfo);
       this->m_folderRequestPending["rootPath"] = false;
       this->finishGettingFolderInformationIfReady();
     });

@@ -50,6 +50,9 @@ public:
   void setItemMode(ItemMode mode) { m_itemMode = mode; }
   ItemMode itemMode() { return m_itemMode; }
 
+  // Set the root folder. Do not set this unless using a custom root folder.
+  void setCustomRootInfo(const QMap<QString, QString>& rootInfo) { m_customRootInfo = rootInfo; }
+
 signals:
   // Emitted when getFolderInformation() is complete
   void folderInformation(const QMap<QString, QString>& parentInfo,
@@ -151,6 +154,9 @@ private:
 
   // Are we currently performing a fetch? If so, we can't perform another one...
   bool m_fetchInProgress;
+
+  // This should only be set if we have a custom root folder
+  QMap<QString, QString> m_customRootInfo;
 };
 
 inline void GirderFileBrowserFetcher::setApiUrlAndGirderToken(const QString& url,
