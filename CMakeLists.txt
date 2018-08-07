@@ -17,7 +17,6 @@ set(SRCS
   ui/girderlogindialog.cxx
   ui/girderfilebrowserdialog.cxx
   utils.cxx
-  cJSON.c
 )
 
 #resource files
