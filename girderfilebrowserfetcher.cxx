@@ -471,6 +471,16 @@ static void popFrontUntilEqual(QList<QMap<QString, QString> >& list,
 
 void GirderFileBrowserFetcher::getRootPath()
 {
+  // To potentially skip an api call, check if the current parent is already
+  // in the root path. If it is, re-assign the path.
+  if (m_currentRootPath.contains(m_currentParentInfo))
+  {
+    while (m_currentRootPath.back() != m_currentParentInfo)
+      m_currentRootPath.pop_back();
+    m_currentRootPath.pop_back();
+    return;
+  }
+
   m_currentRootPath.clear();
 
   // Parent type must be folder or item, or this cannot be called.
