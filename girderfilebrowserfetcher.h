@@ -44,11 +44,16 @@ public:
   // Our different modes for treating items. Default is "treatItemsAsFiles".
   enum class ItemMode {
     treatItemsAsFiles,
-    treatItemsAsFolders
+    treatItemsAsFolders,
+    treatItemsAsFoldersWithFileBumping
   };
 
   void setItemMode(ItemMode mode) { m_itemMode = mode; }
-  ItemMode itemMode() { return m_itemMode; }
+  ItemMode itemMode() const { return m_itemMode; }
+
+  // Convenience functions
+  bool treatItemsAsFiles() const;
+  bool treatItemsAsFolders() const;
 
   // Set the root folder. Do not set this unless using a custom root folder.
   void setCustomRootInfo(const QMap<QString, QString>& rootInfo) { m_customRootInfo = rootInfo; }
@@ -158,6 +163,17 @@ private:
   // This should only be set if we have a custom root folder
   QMap<QString, QString> m_customRootInfo;
 };
+
+inline bool GirderFileBrowserFetcher::treatItemsAsFiles() const
+{
+  return m_itemMode == ItemMode::treatItemsAsFiles;
+}
+
+inline bool GirderFileBrowserFetcher::treatItemsAsFolders() const
+{
+  return m_itemMode == ItemMode::treatItemsAsFolders ||
+         m_itemMode == ItemMode::treatItemsAsFoldersWithFileBumping;
+}
 
 inline void GirderFileBrowserFetcher::setApiUrlAndGirderToken(const QString& url,
   const QString& token)

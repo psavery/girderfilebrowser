@@ -236,7 +236,7 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
 
   QList<QMap<QString, QString> > files;
   // Do we treat items as files?
-  if (m_itemMode == ItemMode::treatItemsAsFiles)
+  if (treatItemsAsFiles())
   {
     for (const auto& id : m_currentItems.keys())
     {
@@ -250,7 +250,7 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
     }
   }
   // Or do we treat items as folders?
-  else if (m_itemMode == ItemMode::treatItemsAsFolders)
+  else if (treatItemsAsFolders())
   {
     for (const auto& id : m_currentItems.keys())
     {
@@ -335,13 +335,13 @@ void GirderFileBrowserFetcher::finishGettingContainingItems(const QMap<QString, 
 {
   m_currentItems = items;
 
-  // If we are to treat items as files, we are done
-  if (m_itemMode == ItemMode::treatItemsAsFiles || items.empty())
+  // If we are to treat items as files or folders without file bumping, we are done
+  if (treatItemsAsFiles() || m_itemMode == ItemMode::treatItemsAsFolders || items.empty())
   {
     m_folderRequestPending["items"] = false;
     finishGettingFolderInformationIfReady();
   }
-  else if (m_itemMode == ItemMode::treatItemsAsFolders)
+  else if (m_itemMode == ItemMode::treatItemsAsFoldersWithFileBumping)
   {
     // Check the contents of every item. If it only contains a file,
     // treat that item as a file.
@@ -364,7 +364,7 @@ void GirderFileBrowserFetcher::finishGettingContainingItems(const QMap<QString, 
   }
 }
 
-// Only called if m_itemMode is ItemMode::treatItemsAsFolders
+// Only called if m_itemMode is ItemMode::treatItemsAsFoldersWithFileBumping
 void GirderFileBrowserFetcher::finishGettingFilesForContainingItems(
   const QMap<QString, QString>& files,
   const QString& itemId)

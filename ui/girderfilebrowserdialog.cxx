@@ -275,7 +275,7 @@ void GirderFileBrowserDialog::rowActivated(const QModelIndex& index)
 
     // If we are to treat items as folders, add items to this list
     using ItemMode = GirderFileBrowserFetcher::ItemMode;
-    if (m_girderFileBrowserFetcher->itemMode() == ItemMode::treatItemsAsFolders)
+    if (m_girderFileBrowserFetcher->treatItemsAsFolders())
       folderTypes.append("item");
 
     if (folderTypes.contains(parentType))
@@ -311,6 +311,10 @@ void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
   else if (itemModeStr == "Treat Items as Folders")
   {
     itemMode = ItemMode::treatItemsAsFolders;
+  }
+  else if (itemModeStr == "Treat Items as Folders with File Bumping")
+  {
+    itemMode = ItemMode::treatItemsAsFoldersWithFileBumping;
   }
   else
   {
