@@ -69,6 +69,12 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   m_ui->list_fileBrowser->setModel(m_itemModel.get());
 
+  // Increase the font size of the entries in the list by just a little
+  // It is 11 by default.
+  QFont font = m_ui->list_fileBrowser->font();
+  font.setPointSize(12);
+  m_ui->list_fileBrowser->setFont(font);
+
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
 
   bool usingCustomRootFolder = false;
