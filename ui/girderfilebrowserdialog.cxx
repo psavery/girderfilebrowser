@@ -97,6 +97,24 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   connect(
     m_ui->push_chooseObject, &QPushButton::pressed, this, &GirderFileBrowserDialog::chooseObject);
 
+  // Only enable the chooseObject button if the type it is on is choosable
+  connect(m_ui->list_fileBrowser->selectionModel(),
+    &QItemSelectionModel::currentChanged,
+    this,
+    [this](const QModelIndex& current, const QModelIndex& previous)
+    {
+      m_ui->push_chooseObject->setEnabled(false);
+      if (current.isValid())
+      {
+        int row = current.row();
+        if (row < m_cachedRowInfo.size() &&
+            this->m_choosableTypes.contains(m_cachedRowInfo[row]["type"]))
+        {
+          m_ui->push_chooseObject->setEnabled(true);
+        }
+      }
+    });
+
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
     m_girderFileBrowserFetcher.get(),
@@ -111,6 +129,16 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
       &GirderFileBrowserDialog::goHome,
       m_girderFileBrowserFetcher.get(),
       &GirderFileBrowserFetcher::getHomeFolderInformation);
+    // Reset the filter box when we go home
+    connect(this,
+      &GirderFileBrowserDialog::goHome,
+      this,
+      [this]()
+      {
+        this->m_ui->edit_matchesExpression->setText("");
+        this->m_rowsMatchExpression = "";
+      }
+    );
   }
   else
   {
@@ -438,6 +466,9 @@ void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>&
 
   updateVisibleRows();
   updateRootPathWidget();
+
+  // Disable object choosing
+  m_ui->push_chooseObject->setEnabled(false);
 }
 
 void GirderFileBrowserDialog::errorReceived(const QString& message)
