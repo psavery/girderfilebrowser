@@ -68,3 +68,36 @@ It is case-insensitive.
 One potential use of the girder file browser is to have a user choose a file
 on a girder server for some purpose in an application. For instance, the application
 could have a user choose an input file on a girder server.
+
+An example of how the girder file browser is created and shown can be seen
+[here](girderfilebrowser.cxx).
+
+The only parts that are needed to start the girder file browser are:
+- a QNetworkAccessManager object (there should be one per program)
+- an api url 
+- a valid girder token for that api url. 
+
+The girder token can be obtained usually by password or api key authentication. They can be set on the
+dialog object with `GirderFileBrowserDialog::setApiUrlAndGirderToken()`. 
+
+Optionally, in the Girder File Browser Dialog constructor, a custom root path can be passed as the second
+constructor parameter. This second parameter is a `QMap<QString, QString>` which should have three entries:
+`name`, `id`, and `type`. The behavior is undefined if any of these are specified incorrectly. Once the custom
+root path is set, the girder file browser should never be able to go above that root path.
+
+Also optionally, a list of choosable types may be set in the browser with 
+`GirderFileBrowserDialog::setChoosableTypes()`. This is a list of strings that resemble types that may
+be chosen. This can be useful if the dialog is to be used to, for instance, have the user choose an
+item on the girder file system. If `GirderFileBrowserDialog::setChoosableTypes()` is set, the only
+types that will appear in the browser window are folder types and the choosable types. To obtain the
+information about the object that the user chose, use Qt to connect to the signal
+`GirderFileBrowserDialog::objectChosen()`, which will be emitted with a map of the following keys: 
+`name`, `id`, and `type`.
+
+Once the Girder File Browser Dialog has been constructed and the api key and girder token are set, 
+`GirderFileBrowserDialog::begin()` should be called. This simply changes the folder to either the
+default root folder or the custom root folder.
+
+After `GirderFileBrowserDialog::begin()` has been called, `GirderFileBrowserDialog::show()` may be
+called to display the dialog.
+
