@@ -11,7 +11,7 @@ To build, simply create a build directory, and then run `cmake <path/to/source/t
 An executable will be placed in the build directory called `girderfilebrowser`.
 
 ## Authenticating the Girder File Browser
-![](https://raw.githubusercontent.com/psavery/girderfilebrowser/master/images/currentLoginWindow.png)
+<img src="https://raw.githubusercontent.com/psavery/girderfilebrowser/master/images/currentLoginWindow.png" width="45%">
 
 When the program is started, a login window will appear asking for the girder api url. This usually ends
 with `/api/v1`. The username and password may then be entered. The password is sent using basic
@@ -26,7 +26,7 @@ will be attempted. If successful, the girder file browser will immediately appea
 can begin. If api authentication fails, the login window will just appear.
 
 ## Running the Girder File Browser
-![](https://raw.githubusercontent.com/psavery/girderfilebrowser/master/images/currentFileBrowser.png)
+<img src="https://raw.githubusercontent.com/psavery/girderfilebrowser/master/images/currentFileBrowser.png" width="35%">
 
 The above image shows the current appearance of the file browser dialog.
 
