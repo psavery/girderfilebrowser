@@ -70,6 +70,7 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   m_fetchInProgress = true;
   m_folderRequestErrorOccurred = false;
 
+  m_previousParentInfo = m_currentParentInfo;
   m_currentParentInfo = parentInfo;
 
   // The first two directory levels will be different from the rest.
@@ -90,10 +91,10 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   }
 
   // For the standard case
+  getRootPath();
   getContainingFolders();
   getContainingItems();
   getContainingFiles();
-  getRootPath();
 }
 
 // A convenience function to do three things:
@@ -471,6 +472,10 @@ static void popFrontUntilEqual(QList<QMap<QString, QString> >& list,
 
 void GirderFileBrowserFetcher::getRootPath()
 {
+  // Skip the root path check if the previous parent was the same as the current one
+  if (m_currentParentInfo == m_previousParentInfo)
+    return;
+
   // To potentially skip an api call, check if the current parent is already
   // in the root path. If it is, re-assign the path.
   if (m_currentRootPath.contains(m_currentParentInfo))
@@ -481,14 +486,31 @@ void GirderFileBrowserFetcher::getRootPath()
     return;
   }
 
-  m_currentRootPath.clear();
-
   // Parent type must be folder or item, or this cannot be called.
   if (currentParentType() != "folder" && currentParentType() != "item")
   {
     prependNeededRootPathItems();
     return;
   }
+
+  // To also potentially skip an api call, check if the current parent was in
+  // the previous set of folders or items. If it was, then we just moved down
+  // one directory. Skip the root path call and set it manually.
+  if (currentParentType() == "folder" && m_currentFolders.keys().contains(currentParentId()))
+  {
+    m_currentRootPath.append(m_previousParentInfo);
+    return;
+  }
+
+  if (currentParentType() == "item" && m_currentItems.keys().contains(currentParentId()))
+  {
+    m_currentRootPath.append(m_previousParentInfo);
+    return;
+  }
+
+  qDebug() << "We are actually calling getRootPath()!!";
+
+  m_currentRootPath.clear();
 
   std::unique_ptr<GetRootPathRequest> getRootPathRequest(new GetRootPathRequest(
     m_networkManager, m_apiUrl, m_girderToken, currentParentId(), currentParentType()));

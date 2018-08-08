@@ -141,6 +141,10 @@ private:
   // Information about the current parent
   QMap<QString, QString> m_currentParentInfo;
 
+  // Information about the previous parent. Cached for faster root path
+  // generation.
+  QMap<QString, QString> m_previousParentInfo;
+
   // Our requests.
   // These will be deleted automatically when a new request is made.
   // We must use a std::map here because QMap has errors with unique_ptr
