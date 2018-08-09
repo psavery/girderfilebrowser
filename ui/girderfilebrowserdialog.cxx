@@ -492,4 +492,23 @@ void GirderFileBrowserDialog::setApiUrlAndGirderToken(const QString& url, const 
   setGirderToken(token);
 }
 
+void GirderFileBrowserDialog::setChoosableTypes(const QStringList& choosableTypes)
+{
+  // Double check and make sure they are valid types
+  for (const auto& type: choosableTypes)
+  {
+    if (!ALL_OBJECT_TYPES.contains(type))
+    {
+      qDebug() << "Error in" << __FUNCTION__ << ": invalid type was set:"
+               << type;
+      qDebug() << "The list of valid types are as follows:"
+               << ALL_OBJECT_TYPES;
+      qDebug() << "Choosable types will not be changed.";
+      return;
+    }
+  }
+
+  m_choosableTypes = choosableTypes;
+}
+
 } // end namespace
