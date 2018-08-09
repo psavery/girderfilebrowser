@@ -478,6 +478,13 @@ void GirderFileBrowserFetcher::getRootPath()
   if (m_currentParentInfo == m_previousParentInfo)
     return;
 
+  // Skip the root path check if the current parent is the actual root
+  if (!m_customRootInfo.isEmpty() && m_currentParentInfo == m_customRootInfo)
+  {
+    m_currentRootPath.clear();
+    return;
+  }
+
   // To potentially skip an api call, check if the  parent is already
   // in the root path. If it is, re-assign the path.
   if (m_currentRootPath.contains(m_currentParentInfo))
