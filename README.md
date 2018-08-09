@@ -92,7 +92,9 @@ item on the girder file system. If `GirderFileBrowserDialog::setChoosableTypes()
 types that will appear in the browser window are folder types and the choosable types. To obtain the
 information about the object that the user chose, use Qt to connect to the signal
 `GirderFileBrowserDialog::objectChosen()`, which will be emitted with a map of the following keys: 
-`name`, `id`, and `type`.
+`name`, `id`, and `type`. The following is the list of choosable types by default: "root", "Users", 
+"Collections", "user", "collection", "folder", "item", and "file". Each choosable type that is set
+must be a part of this list.
 
 Once the Girder File Browser Dialog has been constructed and the api key and girder token are set, 
 `GirderFileBrowserDialog::begin()` should be called. This simply changes the folder to either the
