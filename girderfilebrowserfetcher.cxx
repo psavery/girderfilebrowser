@@ -91,10 +91,10 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   }
 
   // For the standard case
-  getRootPath();
   getContainingFolders();
   getContainingItems();
   getContainingFiles();
+  getRootPath();
 }
 
 // A convenience function to do three things:
@@ -289,6 +289,7 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
 
 void GirderFileBrowserFetcher::getContainingFolders()
 {
+  m_previousFolders = m_currentFolders;
   m_currentFolders.clear();
 
   // Parent type must be user, collection, or folder, or there are no folders
@@ -314,6 +315,7 @@ void GirderFileBrowserFetcher::getContainingFolders()
 
 void GirderFileBrowserFetcher::getContainingItems()
 {
+  m_previousItems = m_currentItems;
   m_currentItems.clear();
 
   // Parent type must be folder, or there are no items
@@ -476,7 +478,7 @@ void GirderFileBrowserFetcher::getRootPath()
   if (m_currentParentInfo == m_previousParentInfo)
     return;
 
-  // To potentially skip an api call, check if the current parent is already
+  // To potentially skip an api call, check if the  parent is already
   // in the root path. If it is, re-assign the path.
   if (m_currentRootPath.contains(m_currentParentInfo))
   {
@@ -496,19 +498,17 @@ void GirderFileBrowserFetcher::getRootPath()
   // To also potentially skip an api call, check if the current parent was in
   // the previous set of folders or items. If it was, then we just moved down
   // one directory. Skip the root path call and set it manually.
-  if (currentParentType() == "folder" && m_currentFolders.keys().contains(currentParentId()))
+  if (currentParentType() == "folder" && m_previousFolders.keys().contains(currentParentId()))
   {
     m_currentRootPath.append(m_previousParentInfo);
     return;
   }
 
-  if (currentParentType() == "item" && m_currentItems.keys().contains(currentParentId()))
+  if (currentParentType() == "item" && m_previousItems.keys().contains(currentParentId()))
   {
     m_currentRootPath.append(m_previousParentInfo);
     return;
   }
-
-  qDebug() << "We are actually calling getRootPath()!!";
 
   m_currentRootPath.clear();
 

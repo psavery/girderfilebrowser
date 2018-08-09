@@ -141,9 +141,11 @@ private:
   // Information about the current parent
   QMap<QString, QString> m_currentParentInfo;
 
-  // Information about the previous parent. Cached for faster root path
-  // generation.
+  // Information about the previous parent, folder, and items are
+  // cached to speed up root path functions.
   QMap<QString, QString> m_previousParentInfo;
+  QMap<QString, QString> m_previousFolders;
+  QMap<QString, QString> m_previousItems;
 
   // Our requests.
   // These will be deleted automatically when a new request is made.
