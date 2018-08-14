@@ -498,6 +498,7 @@ void GirderFileBrowserFetcher::getRootPath()
   // Parent type must be folder or item, or this cannot be called.
   if (currentParentType() != "folder" && currentParentType() != "item")
   {
+    m_currentRootPath.clear();
     prependNeededRootPathItems();
     return;
   }
