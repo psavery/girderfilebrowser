@@ -43,8 +43,6 @@ GirderFileBrowserFetcher::GirderFileBrowserFetcher(QNetworkAccessManager* networ
   QObject* parent)
   : QObject(parent)
   , m_networkManager(networkManager)
-  , m_fetchInProgress(false)
-  , m_itemMode(ItemMode::treatItemsAsFiles)
 {
   // These indicate if a folder request is currently pending
   m_folderRequestPending["folders"] = false;

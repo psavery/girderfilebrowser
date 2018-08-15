@@ -119,7 +119,7 @@ private:
   QStringList m_choosableTypes;
 
   // How much should we offset the top buttons by?
-  int m_rootPathOffset;
+  int m_rootPathOffset = 0;
 
   // Only show rows whose names match with this expression
   QString m_rowsMatchExpression;

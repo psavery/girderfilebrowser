@@ -126,7 +126,7 @@ private:
 
   QString m_apiUrl;
   QString m_girderToken;
-  ItemMode m_itemMode;
+  ItemMode m_itemMode = ItemMode::treatItemsAsFiles;
 
   // These maps are < id => name >
   QMap<QString, QString> m_currentFolders;
@@ -161,10 +161,10 @@ private:
   // Are there any updates pending?
   QMap<QString, bool> m_folderRequestPending;
   // Did any update errors occur?
-  bool m_folderRequestErrorOccurred;
+  bool m_folderRequestErrorOccurred = false;
 
   // Are we currently performing a fetch? If so, we can't perform another one...
-  bool m_fetchInProgress;
+  bool m_fetchInProgress = false;
 
   // This should only be set if we have a custom root folder
   QMap<QString, QString> m_customRootInfo;

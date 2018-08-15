@@ -61,7 +61,6 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   , m_girderFileBrowserFetcher(new GirderFileBrowserFetcher(m_networkManager))
   , m_rootFolder(customRootFolder)
   , m_choosableTypes(ALL_OBJECT_TYPES)
-  , m_rootPathOffset(0)
   , m_folderIcon(new QIcon(":/icons/folder.png"))
   , m_fileIcon(new QIcon(":/icons/file.png"))
 {
