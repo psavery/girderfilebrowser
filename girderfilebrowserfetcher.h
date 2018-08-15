@@ -83,7 +83,7 @@ private slots:
   void errorReceived(const QString& message);
 
   void finishGettingContainingItems(const QMap<QString, QString>& items);
-  // Only called if m_itemMode is ItemMode::treatItemsAsFolders
+  // Only called if m_itemMode is ItemMode::treatItemsAsFoldersWithFileBumping
   void finishGettingFilesForContainingItems(const QMap<QString, QString>& files, const QString& itemId);
 
 private:
@@ -135,7 +135,7 @@ private:
   // should all have 3 keys: "name", "id", and "type"
   QList<QMap<QString, QString> > m_currentRootPath;
 
-  // Only used if m_itemMode is ItemMode::treatItemsAsFolders
+  // Only used if m_itemMode is not ItemMode::treatItemsAsFiles
   QMap<QString, QString> m_currentFiles;
 
   // Information about the current parent
@@ -153,9 +153,9 @@ private:
   // as value.
   std::map<QString, std::unique_ptr<GirderRequest> > m_girderRequests;
 
-  // When the item mode is "treatItemsAsFolders", we look inside every item
-  // to see if it only contains one file. This variable holds all of these
-  // requests and it is used to check if the requests are completed.
+  // When the item mode is "treatItemsAsFoldersWithFileBumping", we look inside
+  // every item to see if it only contains one file. This variable holds all of
+  // these requests and it is used to check if the requests are completed.
   std::vector<std::unique_ptr<GirderRequest> > m_itemContentsRequests;
 
   // Are there any updates pending?
