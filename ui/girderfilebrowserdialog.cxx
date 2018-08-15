@@ -130,7 +130,6 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     this,
     &GirderFileBrowserDialog::errorReceived);
 
-
   bool usingCustomRootFolder = false;
   if (!m_rootFolder.isEmpty() && isRootInfoValid(m_rootFolder))
     usingCustomRootFolder = true;
