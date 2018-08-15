@@ -85,7 +85,16 @@ constructor parameter. This second parameter is a `QMap<QString, QString>` which
 `name`, `id`, and `type`. The behavior is undefined if any of these are specified incorrectly. Once the custom
 root path is set, the girder file browser should never be able to go above that root path.
 
-Also optionally, a list of choosable types may be set in the browser with 
+Items in girder can be treated a few different ways with the file browser. Fundamentally, they may be treated
+as either folders or files. But there is also an option of treating items as folders but bumping the item's
+containing file up one directory level if the item contains only one file and it has the same name. 
+Programmatically, the way items are treated in the girder file browser can be set with
+`GirderFileBrowserDialog::setItemMode()`. The parameter is a `QString`, and it can be one of the following: 
+`Treat Items as Files` (default), `Treat Items as Folders`, or `Treat Items as Folders with File Bumping`. For 
+a slow internet, `Treat Items as Folders with File Bumping` may be noticeably slower because it must make an 
+additional api call for each item that is in the new directory.
+
+Optionally, a list of choosable types may be set in the browser with 
 `GirderFileBrowserDialog::setChoosableTypes()`. This is a list of strings that resemble types that may
 be chosen. This can be useful if the dialog is to be used to, for instance, have the user choose an
 item on the girder file system. If `GirderFileBrowserDialog::setChoosableTypes()` is set, the only
