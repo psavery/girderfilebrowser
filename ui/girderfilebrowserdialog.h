@@ -51,6 +51,9 @@ public:
 
   void setApiUrl(const QString& url);
   void setGirderToken(const QString& token);
+
+  // Set the choosable types. Must be valid types. Some of the valid
+  // types are: 'user', 'collection', 'folder', 'item', 'file'
   void setChoosableTypes(const QStringList& choosableTypes);
 
 signals:
