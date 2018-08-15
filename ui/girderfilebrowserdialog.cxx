@@ -76,24 +76,27 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
 
-  // This is if the user presses the "enter" key... Do the same thing as double-click.
+  // What to do with a row upon double-click or 'enter' key
   connect(m_ui->list_fileBrowser,
     &QAbstractItemView::activated,
     this,
     &GirderFileBrowserDialog::rowActivated);
 
-  // Connect buttons
+  // The 'up' button
   connect(m_ui->push_goUpDir, &QPushButton::pressed, this, &GirderFileBrowserDialog::goUpDirectory);
+  // The 'Home' button
   connect(m_ui->push_goHome, &QPushButton::pressed, this, &GirderFileBrowserDialog::goHome);
+  // Temporary combo box. This will be removed in the final version of this program.
   connect(m_ui->combo_itemMode,
     static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged),
     this,
     &GirderFileBrowserDialog::setItemMode);
 
+  // The 'choose' button
   connect(
     m_ui->push_chooseObject, &QPushButton::pressed, this, &GirderFileBrowserDialog::chooseObject);
 
-  // Only enable the chooseObject button if the type it is on is choosable
+  // Only enable the choose button if the type it is on is choosable
   connect(m_ui->list_fileBrowser->selectionModel(),
     &QItemSelectionModel::currentChanged,
     this,
@@ -111,16 +114,28 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
       }
     });
 
+  // Change folder
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
     m_girderFileBrowserFetcher.get(),
     &GirderFileBrowserFetcher::getFolderInformation);
+  // Finish changing folder
+  connect(m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::folderInformation,
+    this,
+    &GirderFileBrowserDialog::finishChangingFolder);
+  // An error occurred while changing folders
+  connect(m_girderFileBrowserFetcher.get(),
+    &GirderFileBrowserFetcher::error,
+    this,
+    &GirderFileBrowserDialog::errorReceived);
+
 
   bool usingCustomRootFolder = false;
   if (!m_rootFolder.isEmpty() && isRootInfoValid(m_rootFolder))
     usingCustomRootFolder = true;
 
-  // The "go home" button.
+  // What to do when 'goHome' is called.
   if (!usingCustomRootFolder)
   {
     // If we are not using a custom root folder, "go home" will go to the user's
@@ -149,15 +164,6 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
       this,
       [this](){ emit changeFolder(m_rootFolder); });
   }
-
-  connect(m_girderFileBrowserFetcher.get(),
-    &GirderFileBrowserFetcher::folderInformation,
-    this,
-    &GirderFileBrowserDialog::finishChangingFolder);
-  connect(m_girderFileBrowserFetcher.get(),
-    &GirderFileBrowserFetcher::error,
-    this,
-    &GirderFileBrowserDialog::errorReceived);
 
   // When the user types in the filter box, update the visible rows
   connect(m_ui->edit_matchesExpression,
