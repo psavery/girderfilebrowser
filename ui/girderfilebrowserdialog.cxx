@@ -76,10 +76,6 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   m_ui->layout_rootPath->setAlignment(Qt::AlignLeft);
 
-  bool usingCustomRootFolder = false;
-  if (!m_rootFolder.isEmpty() && isRootInfoValid(m_rootFolder))
-    usingCustomRootFolder = true;
-
   // This is if the user presses the "enter" key... Do the same thing as double-click.
   connect(m_ui->list_fileBrowser,
     &QAbstractItemView::activated,
@@ -119,6 +115,10 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     &GirderFileBrowserDialog::changeFolder,
     m_girderFileBrowserFetcher.get(),
     &GirderFileBrowserFetcher::getFolderInformation);
+
+  bool usingCustomRootFolder = false;
+  if (!m_rootFolder.isEmpty() && isRootInfoValid(m_rootFolder))
+    usingCustomRootFolder = true;
 
   // The "go home" button.
   if (!usingCustomRootFolder)
