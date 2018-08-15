@@ -404,7 +404,7 @@ void GirderFileBrowserDialog::updateVisibleRows()
     m_ui->list_fileBrowser->setRowHidden(i, false);
 
   // First, hide any rows that do not match the type the user is choosing
-  // We will always show these types, even if they aren't choosable.
+  // We will always show the following types, even if they aren't choosable.
   QStringList showTypes = { "Users", "Collections", "user", "collection", "folder" };
   // Add the choosable types
   showTypes += m_choosableTypes;
