@@ -132,8 +132,8 @@ void GirderFileBrowserFetcher::getHomeFolderInformation()
       myUserMap["name"] = myUserInfo.value("login");
       myUserMap["id"] = myUserInfo.value("id");
       myUserMap["type"] = "user";
-      this->m_fetchInProgress = false;
-      this->getFolderInformation(myUserMap);
+      m_fetchInProgress = false;
+      getFolderInformation(myUserMap);
     });
 
   m_girderRequests[GET_MY_USER_REQUEST] = std::move(getMyUserRequest);
@@ -169,7 +169,7 @@ void GirderFileBrowserFetcher::getUsersFolderInformation()
     &GetUsersRequest::users,
     this,
     [this](const QMap<QString, QString>& usersMap) {
-      this->finishGettingSecondLevelFolderInformation("user", usersMap);
+      finishGettingSecondLevelFolderInformation("user", usersMap);
     });
 
   m_girderRequests[GET_USERS_REQUEST] = std::move(getUsersRequest);
@@ -184,7 +184,7 @@ void GirderFileBrowserFetcher::getCollectionsFolderInformation()
     &GetCollectionsRequest::collections,
     this,
     [this](const QMap<QString, QString>& collectionsMap) {
-      this->finishGettingSecondLevelFolderInformation("collection", collectionsMap);
+      finishGettingSecondLevelFolderInformation("collection", collectionsMap);
     });
 
   m_girderRequests[GET_COLLECTIONS_REQUEST] = std::move(getCollectionsRequest);
@@ -302,9 +302,9 @@ void GirderFileBrowserFetcher::getContainingFolders()
     &ListFoldersRequest::folders,
     this,
     [this](const QMap<QString, QString>& folders) {
-      this->m_currentFolders = folders;
-      this->m_folderRequestPending["folders"] = false;
-      this->finishGettingFolderInformationIfReady();
+      m_currentFolders = folders;
+      m_folderRequestPending["folders"] = false;
+      finishGettingFolderInformationIfReady();
     });
 
   m_girderRequests[GET_FOLDERS_REQUEST] = std::move(getFoldersRequest);
@@ -357,7 +357,7 @@ void GirderFileBrowserFetcher::finishGettingContainingItems(const QMap<QString, 
         &ListFilesRequest::files,
         this,
         [this, itemId](const QMap<QString, QString>& files) {
-          this->finishGettingFilesForContainingItems(files, itemId);
+          finishGettingFilesForContainingItems(files, itemId);
         });
 
       m_itemContentsRequests.push_back(std::move(listFilesRequest));
@@ -417,9 +417,9 @@ void GirderFileBrowserFetcher::getContainingFiles()
     &ListFilesRequest::files,
     this,
     [this](const QMap<QString, QString>& files) {
-      this->m_currentFiles = files;
-      this->m_folderRequestPending["files"] = false;
-      this->finishGettingFolderInformationIfReady();
+      m_currentFiles = files;
+      m_folderRequestPending["files"] = false;
+      finishGettingFolderInformationIfReady();
     });
 
   m_girderRequests[GET_FILES_REQUEST] = std::move(listFilesRequest);
@@ -525,13 +525,13 @@ void GirderFileBrowserFetcher::getRootPath()
     &GetRootPathRequest::rootPath,
     this,
     [this](const QList<QMap<QString, QString> >& rootPath) {
-      this->m_currentRootPath = rootPath;
-      this->prependNeededRootPathItems();
+      m_currentRootPath = rootPath;
+      prependNeededRootPathItems();
       // If there is a custom root, remove all items till we hit that one
-      if (!this->m_customRootInfo.isEmpty())
-        popFrontUntilEqual(this->m_currentRootPath, this->m_customRootInfo);
-      this->m_folderRequestPending["rootPath"] = false;
-      this->finishGettingFolderInformationIfReady();
+      if (!m_customRootInfo.isEmpty())
+        popFrontUntilEqual(m_currentRootPath, m_customRootInfo);
+      m_folderRequestPending["rootPath"] = false;
+      finishGettingFolderInformationIfReady();
     });
 
   m_girderRequests[GET_ROOT_PATH_REQUEST] = std::move(getRootPathRequest);

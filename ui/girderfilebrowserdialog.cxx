@@ -108,7 +108,7 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
       {
         int row = current.row();
         if (row < m_cachedRowInfo.size() &&
-            this->m_choosableTypes.contains(m_cachedRowInfo[row]["type"]))
+            m_choosableTypes.contains(m_cachedRowInfo[row]["type"]))
         {
           m_ui->push_chooseObject->setEnabled(true);
         }
@@ -135,8 +135,8 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
       this,
       [this]()
       {
-        this->m_ui->edit_matchesExpression->setText("");
-        this->m_rowsMatchExpression = "";
+        m_ui->edit_matchesExpression->setText("");
+        m_rowsMatchExpression = "";
       }
     );
   }
@@ -147,7 +147,7 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     connect(this,
       &GirderFileBrowserDialog::goHome,
       this,
-      [this](){ emit this->changeFolder(this->m_rootFolder); });
+      [this](){ emit changeFolder(m_rootFolder); });
   }
 
   connect(m_girderFileBrowserFetcher.get(),
@@ -167,8 +167,8 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
 
   // Reset the filter text when we change folders
   connect(this, &GirderFileBrowserDialog::changeFolder, m_ui->edit_matchesExpression, [this]() {
-    this->m_ui->edit_matchesExpression->setText("");
-    this->m_rowsMatchExpression = "";
+    m_ui->edit_matchesExpression->setText("");
+    m_rowsMatchExpression = "";
   });
 
   if (!usingCustomRootFolder)
@@ -215,8 +215,8 @@ void GirderFileBrowserDialog::updateRootPathWidget()
   scrollLeft->setFixedWidth(scrollLeftWidth);
   layout->addWidget(scrollLeft);
   connect(scrollLeft, &QPushButton::pressed, this, [this]() {
-    ++this->m_rootPathOffset;
-    this->updateRootPathWidget();
+    ++m_rootPathOffset;
+    updateRootPathWidget();
   });
 
   // The scroll right button
@@ -227,8 +227,8 @@ void GirderFileBrowserDialog::updateRootPathWidget()
   scrollRight->setEnabled(m_rootPathOffset != 0);
   layout->addWidget(scrollRight);
   connect(scrollRight, &QPushButton::pressed, this, [this]() {
-    --this->m_rootPathOffset;
-    this->updateRootPathWidget();
+    --m_rootPathOffset;
+    updateRootPathWidget();
   });
 
   // Sum up the total button width and make sure we don't exceed it
@@ -265,7 +265,7 @@ void GirderFileBrowserDialog::updateRootPathWidget()
 
     const auto& rootPathItem = *it;
 
-    auto callFunc = [this, rootPathItem]() { emit this->changeFolder(rootPathItem); };
+    auto callFunc = [this, rootPathItem]() { emit changeFolder(rootPathItem); };
     QString name = rootPathItem.value("name");
 
     QPushButton* button = new QPushButton(name + "/", parentWidget);
