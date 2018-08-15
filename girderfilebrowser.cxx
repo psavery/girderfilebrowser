@@ -44,6 +44,9 @@ int main(int argc, char* argv[])
   using cumulus::GirderFileBrowserDialog;
   GirderFileBrowserDialog gfbDialog(networkManager.get());
 
+  // An example of how to change the item mode.
+  //gfbDialog.setItemMode("Treat Items as Folders");
+
   QString apiUrl = std::getenv("GIRDER_API_URL");
   QString apiKey = std::getenv("GIRDER_API_KEY");
 

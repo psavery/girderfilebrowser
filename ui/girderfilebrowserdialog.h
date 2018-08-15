@@ -73,13 +73,16 @@ public slots:
   // All visible rows must match this expression
   void changeVisibleRows(const QString& expression);
 
+  // Current item modes are "Treat Items as Files", "Treat Items as Folders",
+  // and "Treat Items as Folders with File Bumping".
+  void setItemMode(const QString& text);
+
 protected:
   void resizeEvent(QResizeEvent* event) override;
 
 private slots:
   void rowActivated(const QModelIndex&);
   void goUpDirectory();
-  void changeItemMode(const QString& text);
   void chooseObject();
 
   void finishChangingFolder(const QMap<QString, QString>& newParentInfo,
@@ -103,6 +106,9 @@ private:
   std::unique_ptr<Ui::GirderFileBrowserDialog> m_ui;
   std::unique_ptr<QStandardItemModel> m_itemModel;
   std::unique_ptr<GirderFileBrowserFetcher> m_girderFileBrowserFetcher;
+
+  // Have we started yet?
+  bool m_hasStarted = false;
 
   QMap<QString, QString> m_currentParentInfo;
 
@@ -130,6 +136,7 @@ private:
 
 inline void GirderFileBrowserDialog::begin()
 {
+  m_hasStarted = true;
   emit changeFolder(m_rootFolder);
 }
 

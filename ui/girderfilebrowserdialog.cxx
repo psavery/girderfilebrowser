@@ -93,7 +93,8 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   connect(m_ui->combo_itemMode,
     static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged),
     this,
-    &GirderFileBrowserDialog::changeItemMode);
+    &GirderFileBrowserDialog::setItemMode);
+
   connect(
     m_ui->push_chooseObject, &QPushButton::pressed, this, &GirderFileBrowserDialog::chooseObject);
 
@@ -334,19 +335,24 @@ void GirderFileBrowserDialog::goUpDirectory()
   emit changeFolder(newParentInfo);
 }
 
-void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
+void GirderFileBrowserDialog::setItemMode(const QString& itemModeStr)
 {
+  QString modifiedItemModeStr = QString(itemModeStr).replace(" ", "");
+
   using ItemMode = GirderFileBrowserFetcher::ItemMode;
   ItemMode itemMode;
-  if (itemModeStr == "Treat Items as Files")
+  if (modifiedItemModeStr.compare("TreatItemsAsFiles",
+                                  Qt::CaseInsensitive) == 0)
   {
     itemMode = ItemMode::treatItemsAsFiles;
   }
-  else if (itemModeStr == "Treat Items as Folders")
+  else if (modifiedItemModeStr.compare("TreatItemsAsFolders",
+                                       Qt::CaseInsensitive) == 0)
   {
     itemMode = ItemMode::treatItemsAsFolders;
   }
-  else if (itemModeStr == "Treat Items as Folders with File Bumping")
+  else if (modifiedItemModeStr.compare("TreatItemsAsFoldersWithFileBumping",
+                                       Qt::CaseInsensitive) == 0)
   {
     itemMode = ItemMode::treatItemsAsFoldersWithFileBumping;
   }
@@ -359,7 +365,8 @@ void GirderFileBrowserDialog::changeItemMode(const QString& itemModeStr)
   m_girderFileBrowserFetcher->setItemMode(itemMode);
 
   // Update the current folder since this may change how we interpret the contents
-  emit changeFolder(m_currentParentInfo);
+  if (m_hasStarted)
+    emit changeFolder(m_currentParentInfo);
 }
 
 void GirderFileBrowserDialog::chooseObject()
