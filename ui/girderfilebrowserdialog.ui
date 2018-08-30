@@ -21,7 +21,7 @@
     <number>9</number>
    </property>
    <item row="1" column="0" colspan="5">
-    <widget class="QListView" name="list_fileBrowser">
+    <widget class="cumulus::GirderFileBrowserListView" name="list_fileBrowser">
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
      </property>

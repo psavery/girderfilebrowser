@@ -16,6 +16,7 @@ set(SRCS
   girderfilebrowserfetcher.cxx
   ui/girderlogindialog.cxx
   ui/girderfilebrowserdialog.cxx
+  ui/girderfilebrowserlistview.cxx
   utils.cxx
 )
 
@@ -26,6 +27,7 @@ set(resources
 qt5_add_resources(res_srcs ${resources})
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/ui")
 
 add_executable(girderfilebrowser MACOSX_BUNDLE WIN32 ${SRCS} ${res_srcs})
 
