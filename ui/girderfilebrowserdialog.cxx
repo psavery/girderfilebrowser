@@ -14,6 +14,7 @@
 #include "girderfilebrowserfetcher.h"
 
 #include <QLabel>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QPushButton>
 #include <QRegularExpression>
@@ -484,7 +485,8 @@ void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>&
 
 void GirderFileBrowserDialog::errorReceived(const QString& message)
 {
-  qDebug() << "Error changing folders:\n" << message;
+  qDebug() << "An error occurred:\n" << message;
+  QMessageBox::critical(this, "An Error Occurred:", message);
 }
 
 void GirderFileBrowserDialog::setApiUrl(const QString& url)
