@@ -118,6 +118,9 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
   // Change folder
   connect(this,
     &GirderFileBrowserDialog::changeFolder,
+    [this](){ this->setCursor(Qt::WaitCursor); });
+  connect(this,
+    &GirderFileBrowserDialog::changeFolder,
     m_girderFileBrowserFetcher.get(),
     &GirderFileBrowserFetcher::getFolderInformation);
   // Finish changing folder
@@ -136,6 +139,9 @@ GirderFileBrowserDialog::GirderFileBrowserDialog(QNetworkAccessManager* networkM
     usingCustomRootFolder = true;
 
   // What to do when 'goHome' is called.
+  connect(this,
+    &GirderFileBrowserDialog::goHome,
+    [this](){ this->setCursor(Qt::WaitCursor); });
   if (!usingCustomRootFolder)
   {
     // If we are not using a custom root folder, "go home" will go to the user's
@@ -481,10 +487,12 @@ void GirderFileBrowserDialog::finishChangingFolder(const QMap<QString, QString>&
 
   // Disable object choosing
   m_ui->push_chooseObject->setEnabled(false);
+  setCursor(Qt::ArrowCursor);
 }
 
 void GirderFileBrowserDialog::errorReceived(const QString& message)
 {
+  setCursor(Qt::ArrowCursor);
   qDebug() << "An error occurred:\n" << message;
   QMessageBox::critical(this, "An Error Occurred:", message);
 }
