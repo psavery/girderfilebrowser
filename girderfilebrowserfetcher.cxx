@@ -62,8 +62,9 @@ GirderFileBrowserFetcher::~GirderFileBrowserFetcher() = default;
 
 void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>& parentInfo)
 {
-  // Clear all requests to cancel any existing requests
-  clearAllRequests();
+  // Clear all requests to cancel any existing requests, and restore the
+  // previous state if this is an interruption.
+  clearAllRequestsAndRestorePreviousState();
 
   // Cache some info in case there is an interruption or error
   m_cachedPreviousParentInfo.first = true;
@@ -105,9 +106,13 @@ void GirderFileBrowserFetcher::clearAllRequests()
   // Indicate that no requests are pending
   for (const auto& key: m_folderRequestPending.keys())
     m_folderRequestPending[key] = false;
+}
 
-  // Restore any previous cached info in case of an error or
-  // an interruption
+// Clear all requests and restore any previous cached info if an error
+// or an interruption occurred.
+void GirderFileBrowserFetcher::clearAllRequestsAndRestorePreviousState()
+{
+  clearAllRequests();
   restoreAllCachedPreviousInfo();
 }
 
@@ -165,8 +170,9 @@ static void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Sl
 
 void GirderFileBrowserFetcher::getHomeFolderInformation()
 {
-  // Clear all requests to cancel any existing requests
-  clearAllRequests();
+  // Clear all requests to cancel any existing requests, and restore the
+  // previous state if this is an interruption.
+  clearAllRequestsAndRestorePreviousState();
 
   std::unique_ptr<GetMyUserRequest> getMyUserRequest(
     new GetMyUserRequest(m_networkManager, m_apiUrl, m_girderToken));
@@ -594,8 +600,8 @@ void GirderFileBrowserFetcher::getRootPath()
 void GirderFileBrowserFetcher::errorReceived(const QString& message)
 {
   // First, clear the requests so no new error is produced from the
-  // current set of updates.
-  clearAllRequests();
+  // current set of updates, and restore the previous state.
+  clearAllRequestsAndRestorePreviousState();
 
   QObject* sender = QObject::sender();
   QString completeMessage;

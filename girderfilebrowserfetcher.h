@@ -113,6 +113,9 @@ private:
 
   // Remove all current requests
   void clearAllRequests();
+  // Also restore the previous state. This should be done for an
+  // interruption or an error.
+  void clearAllRequestsAndRestorePreviousState();
 
   // Cached previous info in case of an error or interruption
   void clearAllCachedPreviousInfo();
