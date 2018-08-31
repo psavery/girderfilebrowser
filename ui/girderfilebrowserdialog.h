@@ -43,6 +43,10 @@ class GirderFileBrowserDialog : public QDialog
 public:
   // If customRootFolder is set, that will be the root folder instead of the
   // standard one.
+  // customRootFolder should have the following keys: "name", "id", and
+  // "type". "type" will typically be "folder" or "user". The keys should
+  // all be valid. If an invalid customRootFolder is provided, the behavior
+  // is undefined.
   explicit GirderFileBrowserDialog(QNetworkAccessManager* networkAccessManager,
     const QMap<QString, QString>& customRootFolder = QMap<QString, QString>(),
     QWidget* parent = nullptr);
@@ -61,7 +65,7 @@ signals:
   // objectInfo should contain "name", "id", and "type".
   void objectChosen(const QMap<QString, QString>& objectInfo);
 
-  // These will not do anything if an update is currently pending
+  // The following signals are used internally only:
   void changeFolder(const QMap<QString, QString>& parentInfo);
   void goHome();
 
