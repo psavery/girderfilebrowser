@@ -50,24 +50,19 @@ GirderFileBrowserFetcher::GirderFileBrowserFetcher(QNetworkAccessManager* networ
   m_folderRequestPending["files"] = false;
   m_folderRequestPending["rootPath"] = false;
 
-  // Indicate that a fetch is complete if a reply is sent
-  connect(this, &GirderFileBrowserFetcher::folderInformation, this, [this]() {
-    m_fetchInProgress = false;
-  });
-  connect(this, &GirderFileBrowserFetcher::error, this, [this]() { m_fetchInProgress = false; });
+  // Any time a request is completed, delete the previous cache
+  connect(this, &GirderFileBrowserFetcher::folderInformation,
+          [this](){ clearAllCachedPreviousInfo(); });
 }
 
 GirderFileBrowserFetcher::~GirderFileBrowserFetcher() = default;
 
 void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>& parentInfo)
 {
-  // If we are currently performing a fetch, ignore the request.
-  if (m_fetchInProgress)
-    return;
+  // Clear all requests to cancel any existing requests
+  clearAllRequests();
 
-  m_fetchInProgress = true;
-  m_folderRequestErrorOccurred = false;
-
+  m_cachedPreviousParentInfo = m_previousParentInfo;
   m_previousParentInfo = m_currentParentInfo;
   m_currentParentInfo = parentInfo;
 
@@ -95,6 +90,66 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   getRootPath();
 }
 
+void GirderFileBrowserFetcher::clearAllRequests()
+{
+  m_girderRequests.clear();
+  m_itemContentsRequests.clear();
+
+  // Indicate that no requests are pending
+  for (const auto& key: m_folderRequestPending.keys())
+    m_folderRequestPending[key] = false;
+
+  // Restore any previous cached info in case of an error or
+  // an interruption
+  restoreAllCachedPreviousInfo();
+}
+
+void GirderFileBrowserFetcher::clearAllCachedPreviousInfo()
+{
+  m_cachedPreviousParentInfo.clear();
+  m_cachedPreviousFolders.clear();
+  m_cachedPreviousItems.clear();
+  m_cachedRootPath.clear();
+}
+
+// Restore all cached info if there was an error or interruption
+void GirderFileBrowserFetcher::restoreAllCachedPreviousInfo()
+{
+  if (!m_cachedPreviousParentInfo.isEmpty()) {
+    m_currentParentInfo = m_previousParentInfo;
+    m_previousParentInfo = m_cachedPreviousParentInfo;
+  }
+
+  if (!m_cachedPreviousFolders.isEmpty()) {
+    m_currentFolders = m_previousFolders;
+    m_previousFolders = m_cachedPreviousFolders;
+  }
+
+  if (!m_cachedPreviousItems.isEmpty()) {
+    m_currentItems = m_previousItems;
+    m_previousItems = m_cachedPreviousItems;
+  }
+
+  if (!m_cachedRootPath.isEmpty())
+    m_currentRootPath = m_cachedRootPath;
+
+  // We run into issues if previous elements are empty...
+  if (m_previousParentInfo.isEmpty())
+    m_previousParentInfo = m_currentParentInfo;
+
+  if (m_previousFolders.isEmpty())
+    m_previousFolders = m_currentFolders;
+
+  if (m_currentItems.isEmpty())
+    m_previousItems = m_currentItems;
+
+  // If we are actually at the top of the root, make sure that is set
+  if (!m_customRootInfo.isEmpty() && m_currentParentInfo == m_customRootInfo)
+    m_currentRootPath.clear();
+
+  clearAllCachedPreviousInfo();
+}
+
 // A convenience function to do three things:
 //   1. Call "send()" on the GirderRequest sender.
 //   2. Create connections for finish condition.
@@ -114,12 +169,8 @@ static void sendAndConnect(Sender* sender, Signal signal, Receiver* receiver, Sl
 
 void GirderFileBrowserFetcher::getHomeFolderInformation()
 {
-  // If we are currently performing a fetch, ignore the request.
-  if (m_fetchInProgress)
-    return;
-
-  m_fetchInProgress = true;
-  m_folderRequestErrorOccurred = false;
+  // Clear all requests to cancel any existing requests
+  clearAllRequests();
 
   std::unique_ptr<GetMyUserRequest> getMyUserRequest(
     new GetMyUserRequest(m_networkManager, m_apiUrl, m_girderToken));
@@ -132,7 +183,6 @@ void GirderFileBrowserFetcher::getHomeFolderInformation()
       myUserMap["name"] = myUserInfo.value("login");
       myUserMap["id"] = myUserInfo.value("id");
       myUserMap["type"] = "user";
-      m_fetchInProgress = false;
       getFolderInformation(myUserMap);
     });
 
@@ -287,6 +337,7 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
 
 void GirderFileBrowserFetcher::getContainingFolders()
 {
+  m_cachedPreviousFolders = m_previousFolders;
   m_previousFolders = m_currentFolders;
   m_currentFolders.clear();
 
@@ -313,6 +364,7 @@ void GirderFileBrowserFetcher::getContainingFolders()
 
 void GirderFileBrowserFetcher::getContainingItems()
 {
+  m_cachedPreviousItems = m_previousItems;
   m_previousItems = m_currentItems;
   m_currentItems.clear();
 
@@ -370,13 +422,6 @@ void GirderFileBrowserFetcher::finishGettingFilesForContainingItems(
   const QMap<QString, QString>& files,
   const QString& itemId)
 {
-  // Do nothing if an error occurred
-  if (m_folderRequestErrorOccurred)
-  {
-    m_itemContentsRequests.clear();
-    return;
-  }
-
   QObject* sender = QObject::sender();
 
   // Remove this object from the item contents requests
@@ -472,6 +517,8 @@ static void popFrontUntilEqual(QList<QMap<QString, QString> >& list,
 
 void GirderFileBrowserFetcher::getRootPath()
 {
+  m_cachedRootPath = m_currentRootPath;
+
   // Skip the root path check if the previous parent was the same as the current one
   if (m_currentParentInfo == m_previousParentInfo)
     return;
@@ -540,31 +587,27 @@ void GirderFileBrowserFetcher::getRootPath()
 
 void GirderFileBrowserFetcher::errorReceived(const QString& message)
 {
+  // First, clear the requests so no new error is produced from the
+  // current set of updates.
+  clearAllRequests();
+
   QObject* sender = QObject::sender();
   QString completeMessage;
   if (sender == m_girderRequests[GET_FOLDERS_REQUEST].get())
   {
-    m_folderRequestErrorOccurred = true;
     completeMessage += "An error occurred while getting folders:\n";
-    m_folderRequestPending["folders"] = false;
   }
   else if (sender == m_girderRequests[GET_ITEMS_REQUEST].get())
   {
-    m_folderRequestErrorOccurred = true;
     completeMessage += "An error occurred while getting items:\n";
-    m_folderRequestPending["items"] = false;
   }
   else if (sender == m_girderRequests[GET_FILES_REQUEST].get())
   {
-    m_folderRequestErrorOccurred = true;
     completeMessage += "An error occurred while getting files:\n";
-    m_folderRequestPending["files"] = false;
   }
   else if (sender == m_girderRequests[GET_ROOT_PATH_REQUEST].get())
   {
-    m_folderRequestErrorOccurred = true;
     completeMessage += "An error occurred while updating the root path:\n";
-    m_folderRequestPending["rootPath"] = false;
   }
   else if (sender == m_girderRequests[GET_USERS_REQUEST].get())
   {
@@ -584,7 +627,6 @@ void GirderFileBrowserFetcher::errorReceived(const QString& message)
       [sender](const std::unique_ptr<GirderRequest>& uPtr) { return uPtr.get() == sender; }))
   {
     m_itemContentsRequests.clear();
-    m_folderRequestErrorOccurred = true;
     completeMessage += "Failed to get one of the item's contents:\n";
   }
   completeMessage += message;

@@ -110,6 +110,13 @@ private:
   void finishGettingSecondLevelFolderInformation(const QString& type,
     const QMap<QString, QString>& map);
 
+  // Remove all current requests
+  void clearAllRequests();
+
+  // Cached previous info in case of an error or interruption
+  void clearAllCachedPreviousInfo();
+  void restoreAllCachedPreviousInfo();
+
   // Convenience functions...
   QString currentParentName() const { return m_currentParentInfo.value("name"); }
   QString currentParentId() const { return m_currentParentInfo.value("id"); }
@@ -117,9 +124,6 @@ private:
 
   // Are any folder requests pending?
   bool folderRequestPending() const;
-
-  // Did any folder request errors occur?
-  bool folderRequestErrors() const { return m_folderRequestErrorOccurred; }
 
   // Members
   QNetworkAccessManager* m_networkManager;
@@ -147,6 +151,12 @@ private:
   QMap<QString, QString> m_previousFolders;
   QMap<QString, QString> m_previousItems;
 
+  // Cache these in case there is an error or interruption
+  QMap<QString, QString> m_cachedPreviousParentInfo;
+  QMap<QString, QString> m_cachedPreviousFolders;
+  QMap<QString, QString> m_cachedPreviousItems;
+  QList<QMap<QString, QString> > m_cachedRootPath;
+
   // Our requests.
   // These will be deleted automatically when a new request is made.
   // We must use a std::map here because QMap has errors with unique_ptr
@@ -160,11 +170,6 @@ private:
 
   // Are there any updates pending?
   QMap<QString, bool> m_folderRequestPending;
-  // Did any update errors occur?
-  bool m_folderRequestErrorOccurred = false;
-
-  // Are we currently performing a fetch? If so, we can't perform another one...
-  bool m_fetchInProgress = false;
 
   // This should only be set if we have a custom root folder
   QMap<QString, QString> m_customRootInfo;
@@ -190,7 +195,7 @@ inline void GirderFileBrowserFetcher::setApiUrlAndGirderToken(const QString& url
 
 inline void GirderFileBrowserFetcher::finishGettingFolderInformationIfReady()
 {
-  if (!folderRequestPending() && !folderRequestErrors())
+  if (!folderRequestPending())
     finishGettingFolderInformation();
 }
 
