@@ -16,6 +16,7 @@
 
 #include <QMap>
 #include <QObject>
+#include <QPair>
 #include <QString>
 
 #include <map>
@@ -152,10 +153,12 @@ private:
   QMap<QString, QString> m_previousItems;
 
   // Cache these in case there is an error or interruption
-  QMap<QString, QString> m_cachedPreviousParentInfo;
-  QMap<QString, QString> m_cachedPreviousFolders;
-  QMap<QString, QString> m_cachedPreviousItems;
-  QList<QMap<QString, QString> > m_cachedRootPath;
+  // The bool in the pair indicates whether a cache is available.
+  // The second item in the pair is the available data.
+  QPair<bool, QMap<QString, QString> > m_cachedPreviousParentInfo;
+  QPair<bool, QMap<QString, QString> > m_cachedPreviousFolders;
+  QPair<bool, QMap<QString, QString> > m_cachedPreviousItems;
+  QPair<bool, QList<QMap<QString, QString> > > m_cachedRootPath;
 
   // Our requests.
   // These will be deleted automatically when a new request is made.

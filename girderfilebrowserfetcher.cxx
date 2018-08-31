@@ -53,6 +53,9 @@ GirderFileBrowserFetcher::GirderFileBrowserFetcher(QNetworkAccessManager* networ
   // Any time a request is completed, delete the previous cache
   connect(this, &GirderFileBrowserFetcher::folderInformation,
           [this](){ clearAllCachedPreviousInfo(); });
+
+  // This is done to set all the cache bools to false
+  clearAllCachedPreviousInfo();
 }
 
 GirderFileBrowserFetcher::~GirderFileBrowserFetcher() = default;
@@ -62,7 +65,11 @@ void GirderFileBrowserFetcher::getFolderInformation(const QMap<QString, QString>
   // Clear all requests to cancel any existing requests
   clearAllRequests();
 
-  m_cachedPreviousParentInfo = m_previousParentInfo;
+  // Cache some info in case there is an interruption or error
+  m_cachedPreviousParentInfo.first = true;
+  m_cachedPreviousParentInfo.second = m_previousParentInfo;
+
+  // Save this info to process the current request
   m_previousParentInfo = m_currentParentInfo;
   m_currentParentInfo = parentInfo;
 
@@ -106,46 +113,35 @@ void GirderFileBrowserFetcher::clearAllRequests()
 
 void GirderFileBrowserFetcher::clearAllCachedPreviousInfo()
 {
-  m_cachedPreviousParentInfo.clear();
-  m_cachedPreviousFolders.clear();
-  m_cachedPreviousItems.clear();
-  m_cachedRootPath.clear();
+  // This is a lazy clear...
+  m_cachedPreviousParentInfo.first = false;
+  m_cachedPreviousFolders.first = false;
+  m_cachedPreviousItems.first = false;
+  m_cachedRootPath.first = false;
 }
 
 // Restore all cached info if there was an error or interruption
 void GirderFileBrowserFetcher::restoreAllCachedPreviousInfo()
 {
-  if (!m_cachedPreviousParentInfo.isEmpty()) {
+  // The first element of each QPair indicates that cached information is
+  // available.
+  if (m_cachedPreviousParentInfo.first) {
     m_currentParentInfo = m_previousParentInfo;
-    m_previousParentInfo = m_cachedPreviousParentInfo;
+    m_previousParentInfo = m_cachedPreviousParentInfo.second;
   }
 
-  if (!m_cachedPreviousFolders.isEmpty()) {
+  if (m_cachedPreviousFolders.first) {
     m_currentFolders = m_previousFolders;
-    m_previousFolders = m_cachedPreviousFolders;
+    m_previousFolders = m_cachedPreviousFolders.second;
   }
 
-  if (!m_cachedPreviousItems.isEmpty()) {
+  if (m_cachedPreviousItems.first) {
     m_currentItems = m_previousItems;
-    m_previousItems = m_cachedPreviousItems;
+    m_previousItems = m_cachedPreviousItems.second;
   }
 
-  if (!m_cachedRootPath.isEmpty())
-    m_currentRootPath = m_cachedRootPath;
-
-  // We run into issues if previous elements are empty...
-  if (m_previousParentInfo.isEmpty())
-    m_previousParentInfo = m_currentParentInfo;
-
-  if (m_previousFolders.isEmpty())
-    m_previousFolders = m_currentFolders;
-
-  if (m_currentItems.isEmpty())
-    m_previousItems = m_currentItems;
-
-  // If we are actually at the top of the root, make sure that is set
-  if (!m_customRootInfo.isEmpty() && m_currentParentInfo == m_customRootInfo)
-    m_currentRootPath.clear();
+  if (m_cachedRootPath.first)
+    m_currentRootPath = m_cachedRootPath.second;
 
   clearAllCachedPreviousInfo();
 }
@@ -337,7 +333,11 @@ void GirderFileBrowserFetcher::finishGettingFolderInformation()
 
 void GirderFileBrowserFetcher::getContainingFolders()
 {
-  m_cachedPreviousFolders = m_previousFolders;
+  // Cache some info in case there is an interruption or error
+  m_cachedPreviousFolders.first = true;
+  m_cachedPreviousFolders.second = m_previousFolders;
+
+  // Save this info to process the current request
   m_previousFolders = m_currentFolders;
   m_currentFolders.clear();
 
@@ -364,7 +364,11 @@ void GirderFileBrowserFetcher::getContainingFolders()
 
 void GirderFileBrowserFetcher::getContainingItems()
 {
-  m_cachedPreviousItems = m_previousItems;
+  // Cache some info in case there is an interruption or error
+  m_cachedPreviousItems.first = true;
+  m_cachedPreviousItems.second = m_previousItems;
+
+  // Save this info for the current request
   m_previousItems = m_currentItems;
   m_currentItems.clear();
 
@@ -517,7 +521,9 @@ static void popFrontUntilEqual(QList<QMap<QString, QString> >& list,
 
 void GirderFileBrowserFetcher::getRootPath()
 {
-  m_cachedRootPath = m_currentRootPath;
+  // Cache some info in case there is an interruption or error
+  m_cachedRootPath.first = true;
+  m_cachedRootPath.second = m_currentRootPath;
 
   // Skip the root path check if the previous parent was the same as the current one
   if (m_currentParentInfo == m_previousParentInfo)
